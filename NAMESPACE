@@ -1,0 +1,23 @@
+useDynLib(FlowSOM, .registration = TRUE)
+
+importFrom(flowCore,read.FCS,compensate,transform,logicleTransform,exprs,
+            transformList)
+importFrom(ConsensusClusterPlus, ConsensusClusterPlus)
+importFrom(igraph,graph.adjacency,minimum.spanning.tree,layout.kamada.kawai,
+            plot.igraph,add.vertex.shape,get.edges,shortest.paths,E,V,'V<-',
+            igraph.shape.noclip)
+
+export(FlowSOM,
+        ReadInput,
+        BuildSOM,
+        Purity,
+        BuildMST,
+        UpdateNodeSize,
+        PlotMarker,
+        PlotPies,
+        PlotStars,
+        PlotCenters,
+        FlowSOMSubset,
+        MetaClustering,
+        metaClustering_consensus,
+        FMeasure)
