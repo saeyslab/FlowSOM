@@ -118,7 +118,7 @@ MapDataToCodes <- function (codes, newdata)
     #     Array with nearest node id for each datapoint
     
     nnCodes <- .C("C_mapDataToCodes", 
-                    as.double(newdata), 
+                    as.double(newdata[,colnames(codes)]), 
                     as.double(codes),
                     as.integer(nrow(codes)),
                     as.integer(nrow(newdata)),

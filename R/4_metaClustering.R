@@ -113,7 +113,7 @@ SSE <- function(data,clustering){
     if(class(clustering)!= "numeric")
         clustering <- as.numeric(as.factor(clustering))
     c_wss <- 0
-    for(j in seq_len(clustering)){
+    for(j in seq_along(clustering)){
         if(sum(clustering==j) > 1){
             c_wss <- c_wss + (nrow(data[clustering==j,,drop=FALSE])-1)*
                         sum(apply(data[clustering==j,,drop=FALSE],2,var))

@@ -47,3 +47,40 @@ FlowSOM <- function(input, pattern=".fcs", compensate=FALSE, spillover=NULL,
 #     scale: logical, is the data rescaled
 #     scaled.center: parameter used to rescale
 #     scaled.scale: parameter used to rescale
+
+AggregateFlowFrames <- function(fileNames, outputFile, cTotal){
+    
+    nFiles <- length(fileNames)
+    cFile <- ceiling(cTotal/nFiles)
+    
+    flowFrame <- NULL
+    
+    for(i in 1:nFiles){
+        f <- read.FCS(fileNames[i])
+        c <- sample(1:nrow(f),min(nrow(f),cFile))
+        m <- matrix(rep(i,min(nrow(f),cFile)))
+        m2 <- m + rnorm(length(m),0,0.1)
+        m <- cbind(m,m2)
+        colnames(m) <- c("File","File_scattered")
+        f <- cbind2(f[c,],m)
+        if(is.null(flowFrame)){
+            flowFrame <- f
+            flowFrame@description$`$FIL` <- gsub(".*/","",outputFile)
+            flowFrame@description$`FILENAME` <- gsub(".*/","",outputFile)
+        }
+        else {
+            exprs(flowFrame) <- rbind(exprs(flowFrame), exprs(f))
+        }
+    }
+    
+    flowFrame@description[[
+        paste("flowCore_$P",ncol(flowFrame)-1,"Rmin",sep="")]] <- 0
+    flowFrame@description[[
+        paste("flowCore_$P",ncol(flowFrame)-1,"Rmax",sep="")]] <- nFiles+1
+    flowFrame@description[[
+        paste("flowCore_$P",ncol(flowFrame),"Rmin",sep="")]] <- 0
+    flowFrame@description[[
+        paste("flowCore_$P",ncol(flowFrame),"Rmax",sep="")]] <- nFiles+1  
+    
+    write.FCS(flowFrame,filename=outputFile)
+}
