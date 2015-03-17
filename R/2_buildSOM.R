@@ -30,7 +30,7 @@ BuildSOM <- function(fsom, colsToUse=NULL, silent=FALSE, ...){
 
 SOM <- function (data, xdim=10, ydim=10, rlen=10, mst=1, alpha=c(0.05, 0.01),
                     radius = quantile(nhbrdist, 0.67) * c(1, 0), 
-                    init=FALSE, distf=2, silent=FALSE) 
+                    init=FALSE, distf=2, silent=FALSE, codes=NULL) 
 {
     # Train a Self Organizing Map, code strongly based on the R kohonen package
     # However, next to rectangular grids, MST neighbourhoods can be computed in
@@ -56,13 +56,15 @@ SOM <- function (data, xdim=10, ydim=10, rlen=10, mst=1, alpha=c(0.05, 0.01),
     # Initialize the grid
     grid <- expand.grid(1:xdim,1:ydim)
     nCodes <- nrow(grid)
-    if(init){
-        starters <- Initialize(data, nCodes)
-        message("Initialization ready\n")
-    } else {
-        starters <- sample(1:nrow(data), nCodes, replace = FALSE)        
+    if(is.null(codes)){
+        if(init){
+            starters <- Initialize(data, nCodes)
+            message("Initialization ready\n")
+        } else {
+            starters <- sample(1:nrow(data), nCodes, replace = FALSE)        
+        }
+        codes <- data[starters, , drop = FALSE]
     }
-    codes <- data[starters, , drop = FALSE]
     
     # Initialize the neighbourhood
     nhbrdist <- as.matrix(stats::dist(grid, method = "maximum"))
@@ -102,7 +104,7 @@ SOM <- function (data, xdim=10, ydim=10, rlen=10, mst=1, alpha=c(0.05, 0.01),
     
     list(xdim=xdim, ydim=ydim, rlen=rlen, mst=mst, alpha=alpha,
         radius=radius, init=init, distf=distf,
-        grid=grid, codes=codes, mapping=mapping)
+        grid=grid, codes=codes, mapping=mapping, nNodes=nCodes)
 }
 
 
@@ -186,4 +188,43 @@ Dist.MST <- function(X){
     weighted = TRUE)
     mst <- minimum.spanning.tree(fullGraph)
     shortest.paths(mst, v=V(mst), to=V(mst), weights=NA)
+}
+
+CountGroups <- function(fsom,groups,plot=TRUE,silent=FALSE){
+    files <- unlist(groups)
+    counts <- matrix(0,nrow=length(files),ncol=fsom$map$nNodes,
+                    dimnames = list(files, as.character(1:fsom$map$nNodes)))
+    for(file in files){
+        if(!silent){print(file)}
+        ff <- read.FCS(file)
+        fsom_f <- NewData(fsom,ff)
+        if(plot){PlotStars(fsom_f,main=file)}
+        tmp <- table(fsom_f$map$mapping[,1])
+        counts[file,names(tmp)] <- tmp
+    }
+    
+    pctgs <- t(sapply(seq_len(nrow(counts)),
+                        function(i){counts[i,]/ rowSums(counts)[i]}))
+    means <- apply(pctgs,2,function(x){
+        tapply(x,
+                INDEX = factor(rep(names(groups),lapply(groups,length)),
+                                    levels = names(groups)),
+                mean)})
+    means <- means+1e-20
+    medians <- apply(pctgs,2,function(x){
+        tapply(x,
+                INDEX = factor(rep(names(groups),lapply(groups,length)),
+                                    levels = names(groups)),
+                median)})
+    medians <- medians+1e-20
+    
+    means_norm <- list()
+    for(group in names(groups)){
+        means_norm[[group]] <- (means[group,] - min(means)) / 
+            (max(means) - min(means))    
+    }
+    
+    list("groups"=rep(names(groups),unlist(lapply(groups,length))),
+        "counts"=counts, "pctgs"=pctgs, "means"=means,
+        "medians"=medians, "means_norm"=means_norm)
 }

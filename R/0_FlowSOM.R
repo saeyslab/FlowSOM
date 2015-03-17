@@ -48,16 +48,21 @@ FlowSOM <- function(input, pattern=".fcs", compensate=FALSE, spillover=NULL,
 #     scaled.center: parameter used to rescale
 #     scaled.scale: parameter used to rescale
 
-AggregateFlowFrames <- function(fileNames, outputFile, cTotal){
+AggregateFlowFrames <- function(fileNames, outputFile, cTotal,writeMeta=FALSE){
     
     nFiles <- length(fileNames)
     cFile <- ceiling(cTotal/nFiles)
     
     flowFrame <- NULL
     
-    for(i in 1:nFiles){
+    for(i in seq_len(nFiles)){
         f <- read.FCS(fileNames[i])
         c <- sample(1:nrow(f),min(nrow(f),cFile))
+        if(writeMeta){
+            write.table(c,paste(gsub("[^/]*$","",outputFile),
+                            gsub("\\.[^.]*$","",gsub(".*/","",fileNames[i])),
+                            "_selected.txt"))
+        }
         m <- matrix(rep(i,min(nrow(f),cFile)))
         m2 <- m + rnorm(length(m),0,0.1)
         m <- cbind(m,m2)

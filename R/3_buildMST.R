@@ -1,4 +1,4 @@
-BuildMST <- function(fsom, silent=FALSE){
+BuildMST <- function(fsom, silent=FALSE, tSNE=FALSE){
     # Add minimal spanning tree description to the FlowSOM object
     #
     # Args:
@@ -13,11 +13,18 @@ BuildMST <- function(fsom, silent=FALSE){
     fullGraph <- graph.adjacency(as.matrix(adjacency), mode = "undirected", 
                                 weighted = TRUE)
     fsom$MST$graph <- minimum.spanning.tree(fullGraph)
-    fsom$MST$l <- layout.kamada.kawai(fsom$MST$graph)
+    fsom$MST$l <- layout.kamada.kawai(fsom$MST$graph)    
+    
+    if(tSNE){
+        fsom$MST$l2 <- tsne(fsom$map$codes)   
+        #library(RDRToolbox)
+        #fsom$MST$l2 <- Isomap(fsom$map$codes,dims=2,k=3)[[1]]
+    }
+    
     UpdateNodeSize(fsom)
 }
 
-UpdateNodeSize <- function(fsom, reset=FALSE){
+UpdateNodeSize <- function(fsom, reset=FALSE, logScale=FALSE){
     # Add size property to the graph based on cellcount for each node
     #
     # Args:
@@ -29,7 +36,11 @@ UpdateNodeSize <- function(fsom, reset=FALSE){
     if(reset){
         fsom$MST$size <- rep(15, nrow(fsom$map$grid))
     } else {
-        t <- table(fsom$map$mapping[, 1])
+        if(logScale){
+            t <- log(table(fsom$map$mapping[, 1]))
+        } else {
+            t <- table(fsom$map$mapping[, 1])
+        }
         cuts <- 14* (t - min(t))/max((t - min(t)))
         #cuts <- as.numeric(cut(t, breaks = 9))
         fsom$MST$size <- numeric(nrow(fsom$map$grid))
@@ -84,13 +95,15 @@ PlotPies <- function(fsom, cellTypes, MST=TRUE, legend=TRUE, clusters=NULL,
     #                not great, so it might be easier to plot without
     #     clusters:  optional, clustering of the SOM nodes
     
-    if(MST){
+    if(MST == 1){
         layout <- fsom$MST$l 
-        lty <- 1 # Draw edges
-    } else {
+        lty <- 1
+    } else if ( MST == 2){
         layout <- as.matrix(fsom$map$grid)
         lty <- 0
-        #lty <- 1
+    } else if (MST == 3){
+        layout <- fsom$MST$l2
+        lty <- 0
     }
     
     # Use clusters for background color
@@ -109,14 +122,27 @@ PlotPies <- function(fsom, cellTypes, MST=TRUE, legend=TRUE, clusters=NULL,
     }
     
     # Calculate percentage of each celltype per node
-    nclusters <- length(unique(cellTypes))
+    if(is.factor(cellTypes)){
+        nclusters <- length(levels(cellTypes))
+    } else {
+        nclusters <- length(unique(cellTypes))
+    }
+    
     nnodes <- nrow(fsom$map$codes)
     percentages <- matrix(+1e-13, nrow=nnodes, ncol=nclusters)
     t <- table(fsom$map$mapping[, 1], cellTypes)
-    percentages[as.numeric(rownames(t)), ] <- (t/rowSums(t))+1e-13
+    percentages[as.numeric(rownames(t)), ] <- (t/(rowSums(t)+1e-13))+1e-13
     percentages_list <- split(percentages, rep(1:nnodes, nclusters))
     colors <- split(rep(colorPalette(nclusters), nnodes), 
                                     rep(1:nnodes, each=nclusters))
+    
+    empty <- seq_len(nnodes)[-as.numeric(rownames(t))]
+    if(length(empty)>0){
+        for(i in empty){
+            percentages_list[[i]] <- c(1,rep(0,nclusters-1))
+        }
+        
+    }
     
     oldpar <- par()
     par(mar=c(1,1,1,1))
@@ -168,7 +194,7 @@ mystar <- function(coords, v=NULL, params) {
 }
 
 
-PlotStars <- function(fsom, markers=fsom$map$colsUsed, MST=TRUE, legend=TRUE, 
+PlotStars <- function(fsom, markers=fsom$map$colsUsed, MST=1, legend=TRUE, 
                     clusters=NULL,main="",colorPalette=colorRampPalette(
                     c("#00007F", "blue", "#007FFF", "cyan", "#7FFF7F", 
                     "yellow", "#FF7F00", "red", "#7F0000")),clusterColorPalette
@@ -189,17 +215,21 @@ PlotStars <- function(fsom, markers=fsom$map$colsUsed, MST=TRUE, legend=TRUE,
                     colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan",
                     "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))))
     
-    if(MST){
+    if(MST == 1){
         layout <- fsom$MST$l 
         lty <- 1
-    } else {
+    } else if ( MST == 2){
         layout <- as.matrix(fsom$map$grid)
+        lty <- 0
+    } else if (MST == 3){
+        layout <- fsom$MST$l2
         lty <- 0
     }
     
     clusterList <- list()
     clusterColors <- NULL
     if(!is.null(clusters)){
+        if(!is.factor(clusters)){clusters <- as.factor(clusters)}
         tmpClusterList <- lapply(levels(clusters), function(cluster) {
                                             which(clusters == cluster)})
         tmpColors <- clusterColorPalette(length(tmpClusterList))
@@ -216,11 +246,25 @@ PlotStars <- function(fsom, markers=fsom$map$colsUsed, MST=TRUE, legend=TRUE,
     oldpar <- par()
     par(mar=c(1,1,1,1))
     if(legend){
-        layout(matrix(c(1,2), 1, 2, byrow = TRUE), 
-            widths=c(1,2), heights=c(1))
-        plot.new()
-        legend("left", legend= fsom$prettyColnames[markers], 
-            fill=colorPalette(ncol(data)), cex=0.7, ncol=1, bty="n")
+        if(!is.null(clusters)){
+            layout(matrix(c(1,3,2,3), 2, 2, byrow = TRUE), 
+                    widths=c(1,2), heights=c(1))
+            plot.new()
+            legend("left", legend= fsom$prettyColnames[markers], 
+                    fill=colorPalette(ncol(data)), cex=0.7, ncol=1, 
+                    bty="n",title="Markers")
+            plot.new()
+            legend("left", legend=levels(clusters),
+                    fill=clusterColorPalette(length(levels(clusters))), cex=0.7,
+                    ncol=1, bty="n",title="Manual annotation")
+            
+        } else {
+            layout(matrix(c(1,2), 1, 2, byrow = TRUE), 
+                    widths=c(1,2), heights=c(1))
+            plot.new()
+            legend("left", legend= fsom$prettyColnames[markers], 
+                    fill=colorPalette(ncol(data)), cex=0.7, ncol=1, bty="n")
+        }
     }
     plot(fsom$MST$g, 
             vertex.shape="star", 
@@ -233,6 +277,7 @@ PlotStars <- function(fsom, markers=fsom$map$colsUsed, MST=TRUE, legend=TRUE,
             mark.groups=clusterList, 
             mark.col=clusterColors, 
             mark.border=clusterColors,
+            #mark.expand=2,
             main=main
     )
     suppressWarnings(par(oldpar))
@@ -313,4 +358,51 @@ NewData <- function(fsom,ff){
     fsom_tmp$map$meanValues[aggr[,1],colnames(aggr[,-1])] <- 
         as.matrix(aggr[,-1])
     UpdateNodeSize(fsom_tmp)
+}
+
+PlotGroups <- function(fsom,groups,tresh = 0.5, p_tresh=NULL,...){
+    groupnames <- rownames(groups$means)
+    
+    
+    fsom <- UpdateNodeSize(fsom,reset=TRUE)
+    fsom$MST$size <- fsom$MST$size * groups$means_norm[[groupnames[1]]]
+    PlotStars(fsom,main=groupnames[1],...)
+                                                            
+    annotation <- list()
+    if(! is.null(p_tresh)){
+        values <- groups$pctgs
+        for(group in groupnames[-1]){
+            score <- rep(NA,ncol(values))
+            for(i in seq_len(ncol(values))){
+                test <- t.test(values[groups$groups %in% groupnames[1],i],
+                                values[groups$groups %in% group,i])
+                #boxplot(counts[1:5,i],counts[11:15,i],main=test$p.value)
+                diff <- groups$means[group,i] - 
+                        groups$means[groupnames[1],i]
+                score[i] <- 1 + (test$p.value < p_tresh) + 
+                            (diff > 0 & test$p.value < p_tresh)
+            }
+            annotation[[group]] <- as.factor(c("--",groupnames[1],group)
+                                                [score])
+        }
+        
+    } else {
+        for(group in groupnames[-1]){
+            diff <- groups$means[group,] - groups$means[1,]
+            values <- abs(diff) / 
+                apply(groups$means[c(groupnames[1],group),],2,max)
+            annotation[[group]] <- as.factor(c("--",groupnames[1],group)[
+                    1 + (values > tresh) + (diff > 0 & values > tresh)])
+        }
+    }
+    
+    for(group in groupnames[-1]){
+        fsom <- UpdateNodeSize(fsom,reset=TRUE)
+        fsom$MST$size <- fsom$MST$size * groups$means_norm[[group]]
+        PlotStars(fsom,clusters=annotation[[group]],main=group,
+                    clusterColorPalette=colorRampPalette(
+                    c("#FFFFFF","#FF000055","#00FFFF55"),alpha=TRUE),...)
+    }
+    
+    annotation
 }

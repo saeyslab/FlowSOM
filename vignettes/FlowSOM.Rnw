@@ -131,24 +131,33 @@ the \Rcode{\$MST} parameter.
 
 \medskip{}
 <<>>=
-fSOM <- BuildMST(fSOM)
+fSOM <- BuildMST(fSOM,tSNE=TRUE)
 str(fSOM$MST)
 @
 
 Once this step is finished, the FlowSOM object can be used for visualization.
-
+You can plot the nodes in several layouts (MST=1: Minimal spanning tree
+(default),MST=2: SOM grid, MST=3: layout)
 \medskip{}
 <<fig=TRUE>>=
 PlotStars(fSOM)
+@
+<<fig=TRUE>>=
+PlotStars(fSOM,MST=2)
+@
+<<fig=TRUE>>=
+PlotStars(fSOM,MST=3)
 @
 
 If you do not want the size to depend on the number of cells assigned to a 
 node, you can reset the node size.
 <<fig=TRUE>>=
 fSOM <- UpdateNodeSize(fSOM, reset=TRUE)
-PlotStars(fSOM,MST=FALSE)
+fSOM$MST$size <- fSOM$MST$size/2
+PlotStars(fSOM)
 fSOM <- UpdateNodeSize(fSOM)
 @
+
 
 It might also be interesting to compare with a manual gating.
 <<fig=TRUE>>=
