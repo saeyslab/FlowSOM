@@ -49,6 +49,32 @@ automatic clustering results.
 \bigskip{}
 \bigskip{}
 
+\section{The easy way}
+The easiest way to use this package is using the wrapper function 
+\Rfunction{FlowSOM}. It has less options than using the separate functions, 
+but in general it has enough power. It returns a list, of which the first
+item is the FlowSOM object (as required as input by many functions in this 
+package) and the second item is the result of the metaclustering.
+
+<<fig=TRUE>>=
+set.seed(42)
+library(FlowSOM)
+
+fileName <- system.file("extdata","lymphocytes.fcs",
+                        package="FlowSOM")
+fSOM <- FlowSOM(fileName,
+                # Input options:
+                compensate = TRUE,transform = TRUE,toTransform=c(8:18),
+                scale = TRUE,
+                # SOM options:
+                colsToUse = c(9,12,14:18), xdim = 7, ydim = 7,
+                # Metaclustering options:
+                nClus = 10)
+
+PlotStars(fSOM[[1]],
+            backgroundValues = as.factor(fSOM[[2]]))
+@
+
 
 \section{Reading the data}
 
@@ -63,12 +89,14 @@ sure that only fcs-files are selected.  When you are already working
 with your data in \R{}, it might be easier to use a \Rclass{flowFrame}
 or \Rclass{flowSet} from the \Biocpkg{flowCore} package as input. This
 is also supported.  If multiple paths or a \Rclass{flowSet} are
-provided, all data will be concatenated.
+provided, all data will be concatenated. You should check and apply 
+normalization if needed using other packages.
 
 When reading the data, several preprocessing options are available. The data 
 can be automatically compensated using a specified matrix, or using the 
-\Rcode{\$SPILL} variable from the fcs-file. 
-The data can be logicle transformed for specified columns. If no columns are 
+\Rcode{\$SPILL} variable from the fcs-file (when \Rcode{compensate} is 
+\Rcode{TRUE} but no value is given for \Rcode{spillover}). 
+The data can be transformed for specified columns. If no columns are 
 provided, all columns from the spillover matrix will be transformed.
 Finally, the data can be scaled. By default, it will scale to a mean of zero 
 and standard deviation of one. However, specific scaling parameters can be set 
@@ -87,7 +115,7 @@ fileName <- system.file("extdata","lymphocytes.fcs",
 fSOM <- ReadInput(fileName,compensate = TRUE,transform = TRUE, 
                     toTransform=c(8:18),scale = TRUE)
 
-ff <- suppressWarnings(read.FCS(fileName))
+ff <- suppressWarnings(flowCore::read.FCS(fileName))
 fSOM <- ReadInput(ff,compensate = TRUE,transform = TRUE, scale = TRUE)
 @
 
@@ -100,7 +128,7 @@ The begin and end indices of the subsets from the different files can be
 found in \Rcode{\$metadata}.
 
 <<>>=
-str(fSOM)
+str(fSOM,max.level = 2)
 @
 
 \section{Building the self-organizing map}
@@ -116,11 +144,11 @@ markers.
 
 The \Rfunction{BuildSOM} function expects a FlowSOM object as input, and will
 return a FlowSOM object with all information about the self organizing map
-added in the map parameter of the FlowSOM object.
+added in the \Rcode{\$map} parameter of the FlowSOM object.
 \medskip{}
 <<>>=
 fSOM <- BuildSOM(fSOM,colsToUse = c(9,12,14:18))
-str(fSOM$map)
+str(fSOM$map,max.level = 2)
 @
 
 \section{Building the minimal spanning tree}
@@ -136,21 +164,23 @@ str(fSOM$MST)
 @
 
 Once this step is finished, the FlowSOM object can be used for visualization.
-You can plot the nodes in several layouts (MST=1: Minimal spanning tree
-(default),MST=2: SOM grid, MST=3: layout)
+You can plot the nodes in several layouts ("MST": Minimal spanning tree
+(default),"grid": SOM grid, "tSNE": alternative layout, only possible when 
+tSNE was TRUE in \Rcode{BuildMST})
 \medskip{}
 <<fig=TRUE>>=
 PlotStars(fSOM)
 @
 <<fig=TRUE>>=
-PlotStars(fSOM,MST=2)
+PlotStars(fSOM,view="grid")
 @
 <<fig=TRUE>>=
-PlotStars(fSOM,MST=3)
+PlotStars(fSOM,view="tSNE")
 @
 
 If you do not want the size to depend on the number of cells assigned to a 
-node, you can reset the node size.
+node, you can reset the node size. This can be used in combination with any of
+the plotting functions.
 <<fig=TRUE>>=
 fSOM <- UpdateNodeSize(fSOM, reset=TRUE)
 fSOM$MST$size <- fSOM$MST$size/2
@@ -159,38 +189,45 @@ fSOM <- UpdateNodeSize(fSOM)
 @
 
 
-It might also be interesting to compare with a manual gating.
+It might also be interesting to compare with a manual gating. The 
+\Rcode{cellTypes} can be any factor which has a value for each individual
+cell, so you can also map other clustering results.
 <<fig=TRUE>>=
 library(flowUtils)
 flowEnv <- new.env()
-ff_c <- compensate(ff,ff@description$SPILL)
+ff_c <- compensate(ff,description(ff)$SPILL)
 colnames(ff_c)[8:18] <- paste("Comp-",colnames(ff_c)[8:18],sep="")
 gatingFile <- system.file("extdata","manualGating.xml", 
                         package="FlowSOM")
-read.gatingML(gatingFile, flowEnv) 
-filterList <- list( "B cells" = flowEnv$ID52300206,
-                    "ab T cells" = flowEnv$ID785879196,
-                    "yd T cells" = flowEnv$ID188379411,
-                    "NK cells" = flowEnv$ID1229333490,
-                    "NKT cells" = flowEnv$ID275096433
-                )
+gateIDs <- c( "B cells"=8,
+                "ab T cells"=10,
+                "yd T cells"=15,
+                "NK cells"=5,
+                "NKT cells"=6)
+cellTypes <- names(gateIDs)
+gatingResult <- ProcessGatingML(ff_c, gatingFile, gateIDs, cellTypes)
 
-results <- list()
-for(cellType in names(filterList)){
-    results[[cellType]] <- filter(ff_c,filterList[[cellType]])@subSet
-}
-
-manual <- rep("Unknown",nrow(ff))
-for(celltype in names(results)){
-    manual[results[[celltype]]] <- celltype
-}
-# Use a factor to define order of the cell types
-manual <- factor(manual,levels = c("Unknown","B cells",
-                                    "ab T cells","yd T cells", 
-                                    "NK cells","NKT cells"))
-
-PlotPies(fSOM,cellTypes=manual)
+PlotPies(fSOM,cellTypes=gatingResult$manual)
 @
+
+If you are interested in one specific marker, you can use the 
+\Rcode{PlotMarker} function.
+
+<<fig=TRUE>>=
+print(colnames(fSOM$map$medianValues))
+PlotMarker(fSOM,"Pacific Blue-A")
+@
+
+If you need to refer to the nodes, it might be useful to number them.
+<<fig=TRUE>>=
+PlotNumbers(UpdateNodeSize(fSOM,reset=TRUE))
+@
+
+You can use this number for a 2D scatter plot indicating the node values.
+<<fig=TRUE>>=
+PlotClusters2D(fSOM,"PE-Texas Red-A","Pacific Blue-A",c(81,82,91,92,93))
+@
+
 
 \section{Meta-clustering the data}
 
@@ -203,13 +240,39 @@ looking for, it might be optimal to provide this number to the algorithm.
 
 <<fig=TRUE>>=
 metaClustering <- metaClustering_consensus(fSOM$map$codes,k=7)
-PlotPies(fSOM,cellTypes=manual,clusters = metaClustering)
+PlotPies(fSOM,cellTypes=gatingResult$manual,
+        backgroundValues = as.factor(metaClustering))
 @
 
 You can also extract the meta-clustering for each cell individually
 <<>>=
 metaClustering_perCell <- metaClustering[fSOM$map$mapping[,1]]
 @
+
+\section{Detecting nodes with a specific pattern}
+If you do not have a manual gating to map on the tree, it might be time-
+consuming to interpret all the different nodes. Therefore, you can also
+query the tree to indicate nodes similar to a specified pattern. This function
+is still being optimized, so make sure to check the marker values to see if it
+corresponds to your expectations.
+
+<<fig=TRUE>>=
+# Look for CD8+ ab T cells
+query <- c("PE-Cy7-A" = "high", #CD3
+            "APC-Cy7-A" = "high", #TCRb
+            "Pacific Blue-A" = "high") #CD8
+query_res <- QueryStarPlot(UpdateNodeSize(fSOM,reset=TRUE), query, 
+                            plot = FALSE)
+
+cellTypes <- factor(rep("Unknown",49),levels=c("Unknown","CD8 T cells"))
+cellTypes[query_res$selected] <- "CD8 T cells"
+PlotStars(fSOM,
+            backgroundValues=cellTypes,
+            backgroundColor=c("#FFFFFF00","#0000FF22"))
+@
+
+\section{Comparing different groups}
+
 
 \section{Summary}
 
@@ -219,3 +282,7 @@ It can help to keep an overview of how all markers are behaving on different
 cell types, and to reduce the probability of overlooking interesting things
 that are present in the data.
 \end{document}
+
+<<>>=
+sessionInfo()
+@
