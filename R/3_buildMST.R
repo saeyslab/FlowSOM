@@ -315,6 +315,11 @@ PlotNumbers <- function(fsom, view="MST",main=NULL){
 #'    fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
 #'    flowSOM_res <- FlowSOM(fileName, compensate=TRUE,transform=TRUE,
 #'                             scale=TRUE,colsToUse=c(9,12,14:18),nClus=7)
+#'    ff <- flowCore::read.FCS(fileName)
+#'    ff_c <- flowCore::compensate(ff,flowCore::description(ff)$SPILL)
+#'    flowCore::colnames(ff_c)[8:18] <- paste("Comp-",
+#'                                      flowCore::colnames(ff_c)[8:18],
+#'                                      sep="")
 #'    
 #'    # Get the manually gated labels using a gatingML file 
 #'    gatingFile <- system.file("extdata","manualGating.xml", 
