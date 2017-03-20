@@ -4,8 +4,12 @@
 #' several algorithms
 #'
 #' @param data   Matrix containing the data to cluster
-#' @param method Clustering method to use
+#' @param method Clustering method to use, given as a string. Options are
+#'               metaClustering_consensus,metaClustering_hclust,
+#'               metaClustering_kmeans,metaClustering_som
 #' @param max    Maximum number of clusters to try out
+#' @param nClus  Exact number of clusters to use. If not NULL, max will be
+#'               ignored.
 #' @param ...    Extra parameters to pass along
 #' 
 #' @return Numeric array indicating cluster for each datapoint
@@ -28,10 +32,12 @@
 #'    flowSOM.clustering <- metacl[flowSOM.res$map$mapping[,1]]    
 #'
 #' @export
-MetaClustering <- function(data,method,max=20,...){
-    res <- DetermineNumberOfClusters(data,max,method,...)
+MetaClustering <- function(data,method,max=20,nClus=NULL,...){
+    if(is.null(nClus)){
+        nClus <- DetermineNumberOfClusters(data,max,method,...)
+    }
     method <- get(method)
-    method(data,k=res)
+    method(data,k=nClus)
 }
 
 DetermineNumberOfClusters <- function(data,max,method,plot=FALSE,smooth=0.2,
@@ -100,6 +106,7 @@ findElbow <- function(data){
 #'
 #' @param data Matrix containing the data to cluster
 #' @param k    Number of clusters
+#' @param seed Seed to pass to consensusClusterPlus
 #' 
 #' @return  Numeric array indicating cluster for each datapoint
 #' @seealso \code{\link{MetaClustering}}
@@ -115,14 +122,15 @@ findElbow <- function(data){
 #'    metacl <- metaClustering_consensus(flowSOM.res$map$codes,k=10)    
 #'
 #' @export
-metaClustering_consensus <- function(data, k=7){
+metaClustering_consensus <- function(data, k=7,seed=NULL){
     results <- suppressMessages(ConsensusClusterPlus::ConsensusClusterPlus(
                                 t(data),
                                 maxK=k, reps=100, pItem=0.9, pFeature=1, 
                                 title=tempdir(), plot="pdf", verbose=FALSE,
                                 clusterAlg="hc", # "hc","km","kmdist","pam"
-                                distance="euclidean" 
+                                distance="euclidean" ,
     #"euclidean","pearson","spearman","binary","maximum","canberra","minkowski"
+                                seed=seed
     ))
     
     results[[k]]$consensusClass
@@ -150,8 +158,8 @@ metaClustering_kmeans <- function(data, k=7){
 }
 
 metaClustering_som <- function(data, k=7){
-    s <- SOM(data,xdim=k,ydim=1,rlen=100)
-    s$unit.classif
+    s <- SOM(data,xdim=k,ydim=1,rlen=100,silent = TRUE)
+    s$mapping[,1]
 }
 
 SSE <- function(data,clustering){

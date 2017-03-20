@@ -8,7 +8,8 @@ PlotStars(fsom, markers = fsom$map$colsUsed, view = "MST",
   colorPalette = grDevices::colorRampPalette(c("#00007F", "blue", "#007FFF",
   "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000")),
   backgroundValues = NULL, backgroundColor = function(n) {    
-  grDevices::rainbow(n, alpha = 0.3) }, backgroundLim = NULL, legend = TRUE,
+  grDevices::rainbow(n, alpha = 0.3) }, backgroundLim = NULL,
+  backgroundBreaks = NULL, thresholds = NULL, legend = TRUE,
   query = NULL, main = "")
 }
 \arguments{
@@ -33,6 +34,15 @@ colors}
 \item{backgroundLim}{Only used when backgroundValues are numerical. 
 Defaults to min and max of the backgroundValues.}
 
+\item{backgroundBreaks}{Breaks to pass on to \code{\link{cut}}, to split
+numerical background values. If NULL, the length of
+backgroundColor will be used (default 100).}
+
+\item{thresholds}{Optional. Array containing a number for each of the 
+markers to be used as the split between high/low. 
+If provided, the percentage of positive cells is
+indicated instead of the MFI}
+
 \item{legend}{Logical, if TRUE add a legend}
 
 \item{query}{Show a low/high profile for certain markers in the legend.
@@ -47,7 +57,7 @@ Resets the layout back to 1 plot at the end.
 }
 \description{
 Plot FlowSOM grid or tree, where each node is represented by 
-a star chart indicating mean marker values
+a star chart indicating median marker values
 }
 \examples{
    # Read from file, build self-organizing map and minimal spanning tree

@@ -8,7 +8,7 @@ FlowSOM(input, pattern = ".fcs", compensate = FALSE, spillover = NULL,
   transform = FALSE, toTransform = NULL,
   transformFunction = flowCore::logicleTransform(), scale = TRUE,
   scaled.center = TRUE, scaled.scale = TRUE, silent = TRUE, colsToUse,
-  nClus = NULL, maxMeta, importance = NULL, ...)
+  nClus = NULL, maxMeta, importance = NULL, seed = NULL, ...)
 }
 \arguments{
 \item{input}{a flowFrame, a flowSet or an array of paths to files or 
@@ -52,6 +52,8 @@ meta-clustering. Ignored if nClus is specified}
 
 \item{importance}{array with numeric values. Parameters will be scaled 
 according to importance}
+
+\item{seed}{Set a seed for reproducible results}
 
 \item{...}{options to pass on to the SOM function 
 (xdim, ydim, rlen, mst, alpha, radius, init, distf)}

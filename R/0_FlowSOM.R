@@ -45,6 +45,7 @@
 #'                      (\code{1:maxMeta})
 #' @param maxMeta       Maximum number of clusters to try out for 
 #'                      meta-clustering. Ignored if nClus is specified
+#' @param seed          Set a seed for reproducible results
 #' @param ...           options to pass on to the SOM function 
 #'                      (xdim, ydim, rlen, mst, alpha, radius, init, distf)
 #'
@@ -88,15 +89,16 @@
 #' @importFrom ConsensusClusterPlus ConsensusClusterPlus
 #' @importFrom BiocGenerics colnames
 #' 
-#' @importFrom flowUtils read.gatingML
 #' @importFrom XML xmlToList xmlParse
 #' 
-#' @export
+#' @export 
+###@importFrom flowUtils read.gatingML
 FlowSOM <- function(input, pattern=".fcs", compensate=FALSE, spillover=NULL, 
                     transform=FALSE, toTransform=NULL, 
                     transformFunction=flowCore::logicleTransform(), scale=TRUE, 
                     scaled.center=TRUE, scaled.scale=TRUE, silent=TRUE, 
-                    colsToUse, nClus=NULL, maxMeta, importance=NULL, ...){
+                    colsToUse, nClus=NULL, maxMeta, importance=NULL, 
+                    seed = NULL, ...){
     # Method to run general FlowSOM workflow. 
     # Will scale the data and uses consensus meta-clustering by default.
     #
@@ -108,6 +110,9 @@ FlowSOM <- function(input, pattern=".fcs", compensate=FALSE, spillover=NULL,
     #
     # Returns:
     #    list with the FlowSOM object and an array with final clusterlabels
+    if(!is.null(seed)){
+        set.seed(seed)
+    }
     
     t <- system.time(fsom <- ReadInput(input, pattern=pattern, 
                                         compensate=compensate, 
@@ -126,13 +131,14 @@ FlowSOM <- function(input, pattern=".fcs", compensate=FALSE, spillover=NULL,
     t <- system.time(fsom <- BuildMST(fsom, silent=silent))
     if(!silent) message(t[3],"\n")
     if(is.null(nClus)){
-        t <- system.time(cl <- MetaClustering(fsom$map$codes,
-                                        "metaClustering_consensus", maxMeta))
+        t <- system.time(cl <- as.factor(MetaClustering(fsom$map$codes,
+                                        "metaClustering_consensus", maxMeta)))
     } else {
-        t <- system.time(cl <- metaClustering_consensus(fsom$map$codes, nClus))
+        t <- system.time(cl <- as.factor(
+            metaClustering_consensus(fsom$map$codes, nClus,seed = seed)))
     }
     if(!silent) message(t[3],"\n")
-    list(fsom, cl)
+    list("FlowSOM"=fsom, "metaclustering"=cl)
 }
 
 #' Aggregate multiple fcs files together
@@ -219,28 +225,28 @@ AggregateFlowFrames <- function(fileNames, cTotal,
 
 
 #' Process a gatingML file
-#' 
+#'
 #' Reads a gatingML file using the \code{\link{flowUtils}} library and
 #' returns a list with a matrix containing filtering results for each specified
 #' gate and a vector with a label for each cell
-#' 
+#'
 #' @param flowFrame     The flowFrame to apply the gating on
 #' @param gatingFile    The gatingML file to read
-#' @param gateIDs       Named vector containing ids to extract from the 
+#' @param gateIDs       Named vector containing ids to extract from the
 #'                      gatingML file to use in the matrix
 #' @param cellTypes     Cell types to use for labeling the cells. Should be a
 #'                      subset of the names of the gateIDs
 #' @param silent        If FALSE, show messages of which gates are being
 #'                      processed
-#'                  
-#' @return This function returns a list in which the first element ("matrix") 
-#' is a matrix containing filtering results for each specified gate and the 
+#'
+#' @return This function returns a list in which the first element ("matrix")
+#' is a matrix containing filtering results for each specified gate and the
 #' second element ("manual") is a vector which assigns a label to each cell
 #'
 #' @seealso \code{\link{PlotPies}}
 #'
 #' @examples
-#' 
+#'
 #'    # Read the flowFrame
 #'    fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
 #'    ff <- flowCore::read.FCS(fileName)
@@ -248,9 +254,9 @@ AggregateFlowFrames <- function(fileNames, cTotal,
 #'    flowCore::colnames(ff_c)[8:18] <- paste("Comp-",
 #'                                      flowCore::colnames(ff_c)[8:18],
 #'                                      sep="")
-#'        
+#'
 #'    # Specify the gating file and the gates of interest
-#'    gatingFile <- system.file("extdata","manualGating.xml", 
+#'    gatingFile <- system.file("extdata","manualGating.xml",
 #'                              package="FlowSOM")
 #'    gateIDs <- c( "B cells"=8,
 #'                  "ab T cells"=10,
@@ -260,8 +266,8 @@ AggregateFlowFrames <- function(fileNames, cTotal,
 #'    cellTypes <- c("B cells","ab T cells","yd T cells",
 #'                  "NK cells","NKT cells")
 #'    gatingResult <- ProcessGatingML(ff_c, gatingFile, gateIDs, cellTypes)
-#'    
-#'    
+#'
+#'
 #'    # Build a FlowSOM tree
 #'    flowSOM.res <- FlowSOM(ff_c,compensate=FALSE,transform=TRUE,
 #'                          toTransform=8:18,colsToUse=c(9,12,14:18),nClus=10)
@@ -295,6 +301,6 @@ ProcessGatingML <- function(flowFrame,gatingFile,gateIDs,
         manual[results[,celltype]] <- celltype
     }
     manual <- factor(manual,levels = c("Unknown",cellTypes))
-    
+
     list("matrix"=results,"manual"=manual)
 }

@@ -258,25 +258,74 @@ Dist.MST <- function(X){
 #' @param  groups   List containing an array with file names for each group
 #' @param  plot     Logical. If TRUE, make a starplot of each individual file
 #' @param  silent   Logical. If TRUE, print progress messages
+#' @param  ...      Extra arguments to be passed on to the PlotStars function
 #'
 #' @return Distance matrix
+#' 
+#' @seealso \code{\link{PlotStars}},\code{\link{PlotGroups}}
+#'
+#' @examples
+#'    library(FlowSOM)
+#'    set.seed(1)
+#'    
+#'    # Build the FlowSOM tree on the example file
+#'    fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+#'    flowSOM.res <- FlowSOM(fileName, compensate=TRUE,transform=TRUE,
+#'                     scale=TRUE,colsToUse=c(9,12,14:18),nClus = 10)
+#'    
+#'    # Have a look at the resulting tree
+#'    PlotStars(flowSOM.res[[1]],backgroundValues = as.factor(flowSOM.res[[2]]))
+#'    
+#'    # Select all cells except the branch that corresponds with automated 
+#'    # cluster 7 (CD3+ TCRyd +) and write te another file for the example
+#'    # In practice you would not generate any new file but use your different
+#'    # files from your different groups
+#'    ff <- flowCore::read.FCS(fileName)
+#'    ff_tmp <- ff[flowSOM.res[[1]]$map$mapping[,1] %in% 
+#'                      which(flowSOM.res[[2]] != 7),]
+#'    flowCore::write.FCS(ff_tmp,file="ff_tmp.fcs")
+#'    # Make an extra file without cluster 7 and double amount of cluster 10
+#'    ff_tmp <- ff[c(which(flowSOM.res[[1]]$map$mapping[,1] %in% 
+#'                                  which(flowSOM.res[[2]] != 7)),
+#'                   which(flowSOM.res[[1]]$map$mapping[,1] %in% 
+#'                                  which(flowSOM.res[[2]] == 5))),]
+#'    flowCore::write.FCS(ff_tmp,file="ff_tmp2.fcs")
+#'    
+#'    # Compare the original file with the two new files we made
+#'    groupRes <- CountGroups(flowSOM.res[[1]], 
+#'                  groups=list("AllCells"=c(fileName),
+#'                            "Without_ydTcells"=c("ff_tmp.fcs","ff_tmp2.fcs")))
+#'    PlotGroups(flowSOM.res[[1]], groupRes)
+#'    
+#'    # Compare only the file with the double amount of cluster 10
+#'    groupRes <- CountGroups(flowSOM.res[[1]], 
+#'                  groups=list("AllCells"=c(fileName),
+#'                  "Without_ydTcells"=c("ff_tmp2.fcs")))
+#'    PlotGroups(flowSOM.res[[1]], groupRes)
 #'
 #' @export 
-CountGroups <- function(fsom,groups,plot=TRUE,silent=FALSE){
-    files <- unlist(groups)
-    counts <- matrix(0,nrow=length(files),ncol=fsom$map$nNodes,
-                    dimnames = list(files, as.character(1:fsom$map$nNodes)))
-    for(file in files){
-        if(!silent){print(file)}
-        ff <- flowCore::read.FCS(file)
-        fsom_f <- NewData(fsom,ff)
-        if(plot){PlotStars(fsom_f,main=file)}
-        tmp <- table(fsom_f$map$mapping[,1])
-        counts[file,names(tmp)] <- tmp
+CountGroups <- function(fsom,groups,plot=TRUE,silent=FALSE,...){
+    if(class(groups[[1]]) == "character"){
+        files <- unlist(groups)
+        counts <- matrix(0,nrow=length(files),ncol=fsom$map$nNodes,
+                        dimnames = list(files, as.character(1:fsom$map$nNodes)))
+        for(file in files){
+            if(!silent){print(file)}
+            ff <- flowCore::read.FCS(file)
+            fsom_f <- NewData(fsom,ff)
+            if(plot){PlotStars(fsom_f,main=file,...)}
+            tmp <- table(fsom_f$map$mapping[,1])
+            counts[file,names(tmp)] <- tmp
+        }
+    } else {
+        stop("The CountGroups function can currently only read from files.
+              groups should be given as a list of character arrays.")
     }
     
     pctgs <- t(sapply(seq_len(nrow(counts)),
                     function(i){counts[i,]/ rowSums(counts)[i]}))
+    rownames(pctgs) <- rownames(counts)
+    
     means <- apply(pctgs,2,function(x){
         tapply(x,
                 INDEX = factor(rep(names(groups),lapply(groups,length)),
@@ -349,32 +398,32 @@ SaveClustersToFCS <- function(fsom, original_files,
     }
 }
 
-#' Find peaks and valleys in one-dimensional data
-#' 
-#' @param data                 array containing the data points
-#' @param minDensityThreshold  Only counts peaks which density > threshold
-#' @param ...                  Other parameters to be passed on to density
-#' 
-#' @return A list containing the density result, peaks and valleys
-PeaksAndValleys <- function(data, minDensityThreshold = 0.05,...){
-    dens <- stats::density(data,...)
-    secondDerivative <- diff(sign(diff(dens$y)))
-    peaks <- which(secondDerivative==-2)
-    peaks <- peaks[dens$y[peaks] > minDensityThreshold]
-    
-    # Split the y-values for each peak. The values are assigned to the
-    # next peak, the values higher than the largest peak are assigned 
-    # to group 0
-    tmp <- split(dens$y,
-                rep(c(peaks,0),
-                    c(peaks[1],diff(peaks),length(dens$y)-max(peaks))))
-    # Find the index of the minimum in each group + the previous peak
-    # = the total index of the valleys
-    valleys <- unlist(lapply(tmp[-c(1,2)],
-                            function(l){which.min(l)[1]}))+
-        peaks[-length(peaks)]
-    list(dens=dens, peaks=peaks, valleys=valleys)
-}
+# #' Find peaks and valleys in one-dimensional data
+# #' 
+# #' @param data                 array containing the data points
+# #' @param minDensityThreshold  Only counts peaks which density > threshold
+# #' @param ...                  Other parameters to be passed on to density
+# #' 
+# #' @return A list containing the density result, peaks and valleys
+# PeaksAndValleys <- function(data, minDensityThreshold = 0.05,...){
+#     dens <- stats::density(data,...)
+#     secondDerivative <- diff(sign(diff(dens$y)))
+#     peaks <- which(secondDerivative==-2)
+#     peaks <- peaks[dens$y[peaks] > minDensityThreshold]
+#     
+#     # Split the y-values for each peak. The values are assigned to the
+#     # next peak, the values higher than the largest peak are assigned 
+#     # to group 0
+#     tmp <- split(dens$y,
+#                 rep(c(peaks,0),
+#                     c(peaks[1],diff(peaks),length(dens$y)-max(peaks))))
+#     # Find the index of the minimum in each group + the previous peak
+#     # = the total index of the valleys
+#     valleys <- unlist(lapply(tmp[-c(1,2)],
+#                             function(l){which.min(l)[1]}))+
+#         peaks[-length(peaks)]
+#     list(dens=dens, peaks=peaks, valleys=valleys)
+# }
 
 
 ##' Score valleys

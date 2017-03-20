@@ -4,12 +4,14 @@
 \alias{metaClustering_consensus}
 \title{MetaClustering}
 \usage{
-metaClustering_consensus(data, k = 7)
+metaClustering_consensus(data, k = 7, seed = NULL)
 }
 \arguments{
 \item{data}{Matrix containing the data to cluster}
 
 \item{k}{Number of clusters}
+
+\item{seed}{Seed to pass to consensusClusterPlus}
 }
 \value{
 Numeric array indicating cluster for each datapoint
