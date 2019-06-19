@@ -4,11 +4,12 @@
 \alias{FlowSOM}
 \title{Run the FlowSOM algorithm}
 \usage{
-FlowSOM(input, pattern = ".fcs", compensate = FALSE, spillover = NULL,
-  transform = FALSE, toTransform = NULL,
+FlowSOM(input, pattern = ".fcs", compensate = FALSE,
+  spillover = NULL, transform = FALSE, toTransform = NULL,
   transformFunction = flowCore::logicleTransform(), scale = TRUE,
-  scaled.center = TRUE, scaled.scale = TRUE, silent = TRUE, colsToUse,
-  nClus = NULL, maxMeta, importance = NULL, seed = NULL, ...)
+  scaled.center = TRUE, scaled.scale = TRUE, silent = TRUE,
+  colsToUse, nClus = NULL, maxMeta, importance = NULL, seed = NULL,
+  ...)
 }
 \arguments{
 \item{input}{a flowFrame, a flowSet or an array of paths to files or 
@@ -73,22 +74,22 @@ Will scale the data and uses consensus meta-clustering by default.
 }
 \examples{
 # Read from file
-fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 flowSOM.res <- FlowSOM(fileName, compensate=TRUE,transform=TRUE,
-                      scale=TRUE,colsToUse=c(9,12,14:18),maxMeta=10)
+                      scale=TRUE,colsToUse=c(9,12,14:18),nClus=10)
 # Or read from flowFrame object
 ff <- flowCore::read.FCS(fileName)
 ff <- flowCore::compensate(ff,ff@description$SPILL)
 ff <- flowCore::transform(ff,
          flowCore::transformList(colnames(ff@description$SPILL),
                                 flowCore::logicleTransform()))
-flowSOM.res <- FlowSOM(ff,scale=TRUE,colsToUse=c(9,12,14:18),maxMeta=10)
+flowSOM.res <- FlowSOM(ff,scale=TRUE,colsToUse=c(9,12,14:18),nClus=10)
 
 # Plot results
 PlotStars(flowSOM.res[[1]])
 
 # Get metaclustering per cell
-flowSOM.clustering <- flowSOM.res[[2]][flowSOM.res[[1]]$map$mapping[,1]]
+flowSOM.clustering <- GetMetaclusters(flowSOM.res)
 
 
 

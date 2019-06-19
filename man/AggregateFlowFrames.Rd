@@ -5,7 +5,8 @@
 \title{Aggregate multiple fcs files together}
 \usage{
 AggregateFlowFrames(fileNames, cTotal, writeOutput = FALSE,
-  outputFile = "aggregate.fcs", writeMeta = FALSE)
+  outputFile = "aggregate.fcs", writeMeta = FALSE, keepOrder = FALSE,
+  verbose = FALSE)
 }
 \arguments{
 \item{fileNames}{Character vector containing full paths to the fcs files
@@ -19,6 +20,13 @@ to aggregate}
 
 \item{writeMeta}{If TRUE, files with the indices of the selected cells are
 generated}
+
+\item{keepOrder}{If TRUE, the random subsample will be ordered in the same
+way as they were originally ordered in the file. Default =
+FALSE.}
+
+\item{verbose}{If TRUE, prints an update every time it starts processing a
+new file. Default = FALSE.}
 }
 \value{
 This function does not return anything, but will write a file with
@@ -34,7 +42,7 @@ value between 0 and 0.1).
 }
 \examples{
 # Define filename
-fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 # This example will sample 2 times 500 cells.
 ff_new <- AggregateFlowFrames(c(fileName,fileName),1000)
 

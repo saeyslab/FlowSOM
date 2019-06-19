@@ -5,8 +5,8 @@
 \title{Plot marker values}
 \usage{
 PlotMarker(fsom, marker = NULL, view = "MST", main = NULL,
-  colorPalette = grDevices::colorRampPalette(c("#00007F", "blue", "#007FFF",
-  "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000")),
+  colorPalette = grDevices::colorRampPalette(c("#00007F", "blue",
+  "#007FFF", "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000")),
   backgroundValues = NULL, backgroundColor = function(n) {    
   grDevices::rainbow(n, alpha = 0.3) }, backgroundBreaks = NULL,
   backgroundLim = NULL)
@@ -47,7 +47,7 @@ Plot FlowSOM grid or tree, coloured by node values for a specific marker
 }
 \examples{
 # Read from file, build self-organizing map and minimal spanning tree
-fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 flowSOM.res <- ReadInput(fileName, compensate=TRUE,transform=TRUE,
                          scale=TRUE)
 flowSOM.res <- BuildSOM(flowSOM.res,colsToUse=c(9,12,14:18))

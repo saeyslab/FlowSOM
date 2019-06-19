@@ -12,7 +12,7 @@
 #' 
 #' @examples 
 #' # Read from file, build self-organizing map
-#' fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+#' fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 #' flowSOM.res <- ReadInput(fileName, compensate=TRUE,transform=TRUE,
 #'                          scale=TRUE)
 #' flowSOM.res <- BuildSOM(flowSOM.res,colsToUse=c(9,12,14:18))
@@ -66,7 +66,7 @@ BuildMST <- function(fsom, silent=FALSE, tSNE=FALSE){
 #' 
 #' @examples 
 #' # Read from file, build self-organizing map and minimal spanning tree
-#' fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+#' fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 #' flowSOM.res <- ReadInput(fileName, compensate=TRUE,transform=TRUE,
 #'                         scale=TRUE)
 #' flowSOM.res <- BuildSOM(flowSOM.res,colsToUse=c(9,12,14:18))
@@ -78,11 +78,6 @@ BuildMST <- function(fsom, silent=FALSE, tSNE=FALSE){
 #'
 #' # Node sizes relative to amount of cells assigned to the node
 #' flowSOM.res <- UpdateNodeSize(flowSOM.res)
-#' PlotStars(flowSOM.res)
-#' 
-#' 
-#' # Smaller node sizes
-#' flowSOM.res <- UpdateNodeSize(flowSOM.res, maxNodeSize = 5)
 #' PlotStars(flowSOM.res)
 #' 
 #' @export
@@ -199,7 +194,10 @@ PlotBackgroundLegend <- function(backgroundValues, background,
     } else {
         graphics::legend("center", legend=levels(background$values),
                fill=background$col, 
-               cex=0.7, ncol=1, bty="n",title=main)       
+               cex=0.7, 
+               ncol =  ceiling(length(levels(background$values)) / 10),
+               bty="n",
+               title=main)       
     }
 }
 
@@ -240,7 +238,7 @@ PlotBackgroundLegend <- function(backgroundValues, background,
 #' 
 #' @examples 
 #' # Read from file, build self-organizing map and minimal spanning tree
-#' fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+#' fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 #' flowSOM.res <- ReadInput(fileName, compensate=TRUE,transform=TRUE,
 #'                          scale=TRUE)
 #' flowSOM.res <- BuildSOM(flowSOM.res,colsToUse=c(9,12,14:18))
@@ -260,12 +258,17 @@ PlotMarker <- function(fsom, marker=NULL, view="MST",main=NULL,
                         backgroundBreaks = NULL,
                         backgroundLim = NULL){
     switch(view,
-            MST  = { layout <- fsom$MST$l 
-            lty <- 1},
-            grid = { layout <- as.matrix(fsom$map$grid)
-            lty <- 0},
-            tSNE = { layout <- fsom$MST$l2
-            lty <- 0}
+           MST  = { 
+             layout <- fsom$MST$l 
+             lty <- 1
+           }, grid = { 
+               layout <- as.matrix(fsom$map$grid)
+               lty <- 0
+           }, tSNE = { 
+             layout <- fsom$MST$l2
+             lty <- 0
+           }, stop("The view should be MST, grid or tSNE. tSNE will only work
+                   if you specified this when building the MST.")
     )
     
     # Choose background colour
@@ -286,9 +289,8 @@ PlotMarker <- function(fsom, marker=NULL, view="MST",main=NULL,
             vertex.label=NA,edge.lty=lty)
     }else{
         f <- fsom
-        values <- as.numeric(cut(fsom$map$medianValues[, marker], breaks = 100))
-        igraph::V(f$MST$graph)$color <- colorPalette(100)[values] 
-        igraph::V(f$MST$graph)$color[is.na(values)] <- "#000000"
+        igraph::V(f$MST$graph)$color <- colorPalette(100)[as.numeric(cut(
+            fsom$map$medianValues[, marker], breaks = 100))] 
         igraph::plot.igraph(f$MST$graph, 
             layout=layout, 
             vertex.size=fsom$MST$size, 
@@ -301,7 +303,7 @@ PlotMarker <- function(fsom, marker=NULL, view="MST",main=NULL,
         
         graphics::par(fig=c(0,0.2,0,1),mar=c(0,0,0,0),new=TRUE)
         legendContinuous(colorPalette(100),
-                   stats::na.exclude(fsom$map$medianValues[, marker]))
+                   fsom$map$medianValues[, marker])
     }
     graphics::par(oldpar)
 }
@@ -342,7 +344,7 @@ PlotMarker <- function(fsom, marker=NULL, view="MST",main=NULL,
 #' 
 #' @examples 
 #' # Read from file, build self-organizing map and minimal spanning tree
-#' fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+#' fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 #' flowSOM.res <- ReadInput(fileName, compensate=TRUE,transform=TRUE,
 #'                          scale=TRUE)
 #' flowSOM.res <- BuildSOM(flowSOM.res,colsToUse=c(9,12,14:18))
@@ -369,7 +371,9 @@ PlotVariable <- function(fsom, variable, view="MST",main=NULL,
             grid = { layout <- as.matrix(fsom$map$grid)
             lty <- 0},
             tSNE = { layout <- fsom$MST$l2
-            lty <- 0}
+            lty <- 0}, 
+           stop("The view should be MST, grid or tSNE. tSNE will only work
+                   if you specified this when building the MST.")
     )
     
     # Choose background colour
@@ -418,12 +422,148 @@ PlotVariable <- function(fsom, variable, view="MST",main=NULL,
     graphics::par(oldpar)
 }
 
+
+
+
+
+#' Plot SD
+#' 
+#' --- Function in development, use with caution ---
+#' Plot FlowSOM grid or tree, coloured by standard deviaton
+#' 
+#' From suggestion in email:
+#' I am currently considering a way to summarize for each node all the SD as one value. 
+#' After computing the SD matrix (nrow = # nodes, ncol = # markers), I compute the median value per column, 
+#' then divide the SD matrix by it, and finally take the maximum ratio of each line (aka node). 
+#' Doing so I got a unique dispersion score per node. 
+#' 
+#' @param fsom         FlowSOM object, as generated by \code{\link{BuildMST}}
+#' @param marker       If a marker is given, the sd for this marker is shown.
+#'                     Otherwise, the maximum ratio is used.
+#' @param view         Preferred view, options: "MST", "grid" or "tSNE" (if this
+#'                     option was selected while building the MST)
+#' @param main         Title of the plot
+#' @param colorPalette Color palette to use
+#' @param symmetric    Plot colours symmetric around zero
+#' @param lim          Variable limits
+#' 
+#' @param backgroundValues  Values to be used for background coloring, either
+#'                          numerical values or something that can be made into
+#'                          a factor (e.g. a clustering)
+#' @param backgroundColor   Colorpalette to be used for the background coloring
+#'                          . Can be either a function or an array specifying
+#'                          colors
+#' @param backgroundLim     Only used when backgroundValues are numerical. 
+#'                          Defaults to min and max of the backgroundValues.
+#' @param backgroundBreaks  Breaks to pass on to \code{\link{cut}}, to split
+#'                          numerical background values. If NULL, the length of
+#'                          backgroundColor will be used (default 100).
+#' 
+#' @return Nothing is returned. A plot is drawn in which each node 
+#'         is coloured depending on its standard deviation
+#' @seealso \code{\link{PlotMarker}},\code{\link{PlotStars}},
+#'          \code{\link{PlotPies}},\code{\link{PlotCenters}},
+#'          \code{\link{BuildMST}}
+#' 
+#' @examples 
+#' # Read from file, build self-organizing map and minimal spanning tree
+#' fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
+#' flowSOM.res <- ReadInput(fileName, compensate=TRUE,transform=TRUE,
+#'                          scale=TRUE)
+#' flowSOM.res <- BuildSOM(flowSOM.res,colsToUse=c(9,12,14:18))
+#' flowSOM.res <- BuildMST(flowSOM.res)
+#' 
+#' PlotSD(flowSOM.res)
+#' 
+#' @export
+PlotSD <- function(fsom, 
+                   marker= NULL,
+                   view="MST", main=NULL, 
+                   colorPalette=grDevices::colorRampPalette(c(
+                     "#00007F", "blue", "#007FFF", "cyan", "#7FFF7F", "yellow",
+                     "#FF7F00","red", "#7F0000")),symmetric=FALSE,
+                   lim=NULL,
+                   backgroundValues = NULL,
+                   backgroundColor = function(n){
+                     grDevices::rainbow(n,alpha=0.3)},
+                   backgroundLim = NULL,
+                   backgroundBreaks = NULL){
+  switch(view,
+         MST  = { layout <- fsom$MST$l 
+         lty <- 1},
+         grid = { layout <- as.matrix(fsom$map$grid)
+         lty <- 0},
+         tSNE = { layout <- fsom$MST$l2
+         lty <- 0}, 
+         stop("The view should be MST, grid or tSNE. tSNE will only work
+                   if you specified this when building the MST.")
+  )
+  
+  # Choose background colour
+  if(!is.null(backgroundValues)){
+    background <- computeBackgroundColor(backgroundValues,backgroundColor,
+                                         backgroundLim, backgroundBreaks)
+  } else {
+    background <- NULL
+  }
+  
+  stdevs <- apply(fsom$data[, fsom$map$colsUsed], 
+                  2, 
+                  function(x){
+                    tapply(x, fsom$map$mapping[, 1], stats::sd)
+                  })
+  stdev_medians <- apply(stdevs, 2, stats::median)
+  if(is.null(marker)){
+    variable <- apply(stdevs, 1, function(x){max(x / stdev_medians)})
+  } else{
+    variable <- stdevs[,marker] / stdev_medians[marker]
+  }
+  oldpar <- graphics::par(no.readonly = TRUE)
+  graphics::par(mar=c(1,1,1,1))
+  graphics::layout(matrix(c(1,2), 1, 2, byrow = TRUE), 
+                   widths=c(1,2), heights=c(1))
+  graphics::plot.new()
+  
+  if(is.null(lim)){
+    if(symmetric){
+      lim <- c(-max(abs(variable)),max(abs(variable)))
+    } else {
+      lim <- c(min(variable),max(variable))
+    }
+  }
+  
+  legendContinuous(colorPalette(100),lim)
+  
+  
+  f <- fsom
+  
+  igraph::V(f$MST$graph)$color <- colorPalette(100)[as.numeric(cut(
+    c(lim,variable), 
+    breaks = 100))[-c(1,2)]] 
+  
+  igraph::plot.igraph(f$MST$graph, 
+                      layout=layout, 
+                      vertex.size=fsom$MST$size, 
+                      vertex.label=NA, 
+                      main=main,
+                      edge.lty=lty,
+                      mark.groups=background$groups, 
+                      mark.col=background$col[background$values], 
+                      mark.border=background$col[background$values])
+  
+  
+  graphics::layout(1)
+  graphics::par(oldpar)
+}
+
+
+                                                                                                                      
 #################
 ## PlotNumbers ##
 #################
 #' Plot the index of each node
 #' 
-#' Plot FlowSOM grid or tree, with in each node a number indicating it's index
+#' Plot FlowSOM grid or tree, with in each node a number indicating its index
 #' 
 #' @param fsom         FlowSOM object, as generated by \code{\link{BuildMST}}
 #' @param view     Preferred view, options: "MST", "grid" or "tSNE" (if this
@@ -431,6 +571,7 @@ PlotVariable <- function(fsom, variable, view="MST",main=NULL,
 #' @param main         Title of the plot
 #' @param nodeSize   Nodesize. The plot might be easier to read if this is a 
 #'                   constant number, e.g. 10 or 15
+#' @param fontSize  Fontsize, passed to label.cex
 #' @param backgroundValues  Values to be used for background coloring, either
 #'                          numerical values or something that can be made into
 #'                          a factor (e.g. a clustering)
@@ -451,7 +592,7 @@ PlotVariable <- function(fsom, variable, view="MST",main=NULL,
 #' 
 #' @examples 
 #' # Read from file, build self-organizing map and minimal spanning tree
-#' fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+#' fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 #' flowSOM.res <- ReadInput(fileName, compensate=TRUE,transform=TRUE,
 #'                          scale=TRUE)
 #' flowSOM.res <- BuildSOM(flowSOM.res,colsToUse=c(9,12,14:18))
@@ -465,6 +606,7 @@ PlotVariable <- function(fsom, variable, view="MST",main=NULL,
 #' 
 #' @export
 PlotNumbers <- function(fsom, view="MST",main=NULL,nodeSize=fsom$MST$size,
+                        fontSize = 1,
                         backgroundValues = NULL,
                         backgroundColor = function(n){
                             grDevices::rainbow(n,alpha=0.3)},
@@ -476,7 +618,9 @@ PlotNumbers <- function(fsom, view="MST",main=NULL,nodeSize=fsom$MST$size,
             grid = { layout <- as.matrix(fsom$map$grid)
             lty <- 0},
             tSNE = { layout <- fsom$MST$l2
-            lty <- 0}
+            lty <- 0},
+           stop("The view should be MST, grid or tSNE. tSNE will only work
+                   if you specified this when building the MST.")
     )
     
     # Choose background colour
@@ -491,11 +635,102 @@ PlotNumbers <- function(fsom, view="MST",main=NULL,nodeSize=fsom$MST$size,
         layout=layout, 
         vertex.size=nodeSize, 
         vertex.label=seq_len(nrow(fsom$map$codes)),
+        vertex.label.cex = fontSize,
         edge.lty=lty,
-        mark.groups=background$groups, 
-        mark.col=background$col[background$values], 
-        mark.border=background$col[background$values])
-    
+        mark.groups=background$groups,
+        mark.col=background$col[background$values],
+        mark.border=background$col[background$values],
+        main=main)
+
+}
+
+#' Plot a label in each node
+#' 
+#' Plot FlowSOM grid or tree, with in each node a label. Especially useful to
+#' show metacluster numbers
+#' 
+#' @param fsom         FlowSOM object, as generated by \code{\link{BuildMST}}
+#' @param labels    A label for every node
+#' @param view     Preferred view, options: "MST", "grid" or "tSNE" (if this
+#'                 option was selected while building the MST)
+#' @param main         Title of the plot
+#' @param nodeSize   Nodesize. The plot might be easier to read if this is a 
+#'                   constant number, e.g. 10 or 15
+#' @param fontSize  Fontsize, passed to label.cex
+#' @param backgroundValues  Values to be used for background coloring, either
+#'                          numerical values or something that can be made into
+#'                          a factor (e.g. a clustering)
+#' @param backgroundColor   Colorpalette to be used for the background coloring
+#'                          . Can be either a function or an array specifying
+#'                          colors
+#' @param backgroundLim     Only used when backgroundValues are numerical. 
+#'                          Defaults to min and max of the backgroundValues.
+#' @param backgroundBreaks  Breaks to pass on to \code{\link{cut}}, to split
+#'                          numerical background values. If NULL, the length of
+#'                          backgroundColor will be used (default 100).
+#'                          
+#' @return Nothing is returned. A plot is drawn in which each node 
+#'         is assigned a label
+#' @seealso \code{\link{PlotNumbers}}
+#' 
+#' @examples 
+#' # Read from file, build self-organizing map and minimal spanning tree
+#' fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
+#' ff <- flowCore::read.FCS(fileName)
+#' ff <- flowCore::compensate(ff, ff@description$SPILL)
+#' ff <- flowCore::transform(ff, flowCore::estimateLogicle(ff,
+#'                                                flowCore::colnames(ff)[8:18]))
+#' flowSOM.res <- FlowSOM(ff,
+#'                        scale=TRUE,
+#'                        colsToUse=c(9,12,14:18),
+#'                        nClus = 10,
+#'                        seed = 1)
+#' 
+#' # Plot the node IDs
+#' PlotLabels( flowSOM.res$FlowSOM, flowSOM.res$metaclustering, nodeSize=15)
+#' 
+#' @export
+PlotLabels <- function(fsom, 
+                       labels,
+                       view="MST",
+                       main=NULL,
+                       nodeSize=fsom$MST$size,
+                       fontSize = 1,
+                       backgroundValues = NULL,
+                       backgroundColor = function(n){
+                         grDevices::rainbow(n,alpha=0.3)},
+                       backgroundLim = NULL,
+                       backgroundBreaks = NULL){
+  switch(view,
+         MST  = { layout <- fsom$MST$l 
+         lty <- 1},
+         grid = { layout <- as.matrix(fsom$map$grid)
+         lty <- 0},
+         tSNE = { layout <- fsom$MST$l2
+         lty <- 0}, 
+         stop("The view should be MST, grid or tSNE. tSNE will only work
+                   if you specified this when building the MST.")
+  )
+  
+  # Choose background colour
+  if(!is.null(backgroundValues)){
+    background <- computeBackgroundColor(backgroundValues,backgroundColor,
+                                         backgroundLim, backgroundBreaks)
+  } else {
+    background <- NULL
+  }
+  
+  igraph::plot.igraph(fsom$MST$graph, 
+                      layout=layout, 
+                      vertex.size=nodeSize, 
+                      vertex.label=labels,
+                      vertex.label.cex = fontSize,
+                      edge.lty=lty,
+                      mark.groups=background$groups,
+                      mark.col=background$col[background$values],
+                      mark.border=background$col[background$values],
+                      main=main)
+
 }
 
 ##############
@@ -533,31 +768,36 @@ PlotNumbers <- function(fsom, view="MST",main=NULL,nodeSize=fsom$MST$size,
 #' \code{\link{PlotCenters}},\code{\link{BuildMST}}
 #'
 #' @examples 
-#'    # Read from file, build self-organizing map and minimal spanning tree
-#'    fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
-#'    flowSOM_res <- FlowSOM(fileName, compensate=TRUE,transform=TRUE,
-#'                             scale=TRUE,colsToUse=c(9,12,14:18),nClus=7)
-#'    ff <- flowCore::read.FCS(fileName)
-#'    ff_c <- flowCore::compensate(ff,flowCore::description(ff)$SPILL)
-#'    flowCore::colnames(ff_c)[8:18] <- paste("Comp-",
-#'                                      flowCore::colnames(ff_c)[8:18],
-#'                                      sep="")
+#'#' # Identify the files
+#' fcs_file <- system.file("extdata", "68983.fcs", package = "FlowSOM")
+#' wsp_file <- system.file("extdata", "gating.wsp", package = "FlowSOM")
+#' 
+#' # Specify the cell types of interest for assigning one label per cell
+#' cell_types <- c("B cells",
+#'                 "gd T cells", "CD4 T cells", "CD8 T cells",
+#'                 "NK cells","NK T cells")
+#'
+#' # Parse the FlowJo workspace   
+#' library(flowWorkspace)             
+#' gatingResult <- GetFlowJoLabels(fcs_file, wsp_file,
+#'                                 cell_types = cell_types)
+#'
+#' # Check the number of cells assigned to each gate
+#' colSums(gatingResult$matrix)
+#' 
+#' # Build a FlowSOM tree
+#' flowSOM.res <- FlowSOM(fcs_file, 
+#'                        compensate = TRUE, 
+#'                        transform = TRUE,
+#'                        toTransform = 8:18, 
+#'                        colsToUse = c(9,12,14:18),
+#'                        nClus = 10,
+#'                        seed = 1)
 #'    
-#'    # Get the manually gated labels using a gatingML file 
-#'    gatingFile <- system.file("extdata","manualGating.xml", 
-#'                              package="FlowSOM")
-#'    gateIDs <- c( "B cells"=8,
-#'                  "ab T cells"=10,
-#'                  "yd T cells"=15,
-#'                  "NK cells"=5,
-#'                  "NKT cells"=6)
-#'    cellTypes <- c("B cells","ab T cells","yd T cells",
-#'                  "NK cells","NKT cells")
-#'    gatingResult <- ProcessGatingML(ff_c, gatingFile, gateIDs, cellTypes)
-#'        
-#'    
-#'    # Plot pies indicating the percentage of cell types present in the nodes
-#'    PlotPies(flowSOM_res[[1]],gatingResult$manual)
+#'  # Plot pies indicating the percentage of cell types present in the nodes
+#'  PlotPies(flowSOM.res$FlowSOM,
+#'           gatingResult$manual,
+#'           backgroundValues = flowSOM.res$metaclustering)
 #'
 #' @export
 PlotPies <- function(fsom, 
@@ -594,7 +834,9 @@ PlotPies <- function(fsom,
             grid = { layout <- as.matrix(fsom$map$grid)
             lty <- 0},
             tSNE = { layout <- fsom$MST$l2
-            lty <- 0}
+            lty <- 0}, 
+           stop("The view should be MST, grid or tSNE. tSNE will only work
+                   if you specified this when building the MST.")
     )
     
     # Choose background colour
@@ -669,12 +911,13 @@ mystar <- function(coords, v=NULL, params) {
     data <- params("vertex", "data")
     cP <- params("vertex","cP")
     scale <- params("vertex","scale")
+    bg <- params("vertex","bg")
+    graphics::symbols(coords[, 1], coords[, 2], circles = vertex.size, 
+                      inches = FALSE, bg = bg, bty='n', add=TRUE) 
     graphics::stars(data, locations = coords, labels = NULL,scale=scale, 
             len = vertex.size, col.segments = cP, 
             draw.segments = TRUE, mar = c(0, 0, 0, 0), add=TRUE, 
             inches=FALSE)
-    graphics::symbols(coords[, 1], coords[, 2], circles = vertex.size, 
-            inches = FALSE, bg = "transparent", bty='n', add=TRUE) 
     
 }
 
@@ -834,6 +1077,9 @@ plotStarQuery <- function(labels,values,
 #' @param view     Preferred view, options: "MST", "grid" or "tSNE" (if this
 #'                 option was selected while building the MST)
 #' @param colorPalette      Colorpalette to be used for the markers
+#' @param starBg Background color inside the star circle. Default is "white".
+#'               Can also be put to  "transparent" (as was the case for older 
+#'               versions).
 #' @param backgroundValues  Values to be used for background coloring, either
 #'                          numerical values or something that can be made into
 #'                          a factor (e.g. a clustering)
@@ -845,6 +1091,7 @@ plotStarQuery <- function(labels,values,
 #' @param backgroundBreaks  Breaks to pass on to \code{\link{cut}}, to split
 #'                          numerical background values. If NULL, the length of
 #'                          backgroundColor will be used (default 100).
+#' @param backgroundSize Size of the background circles. Default 15.
 #' @param thresholds    Optional. Array containing a number for each of the 
 #'                      markers to be used as the split between high/low. 
 #'                      If provided, the percentage of positive cells is
@@ -863,7 +1110,7 @@ plotStarQuery <- function(labels,values,
 #' 
 #' @examples
 #'    # Read from file, build self-organizing map and minimal spanning tree
-#'    fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+#'    fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 #'    flowSOM.res <- ReadInput(fileName, compensate=TRUE,transform=TRUE,
 #'                             scale=TRUE)
 #'    flowSOM.res <- BuildSOM(flowSOM.res,colsToUse=c(9,12,14:18))
@@ -874,36 +1121,41 @@ plotStarQuery <- function(labels,values,
 #'
 #' @export
 PlotStars <- function(fsom, 
-                        markers=fsom$map$colsUsed, 
-                        view="MST", #"grid","tSNE"
-                        colorPalette=grDevices::colorRampPalette(
-                            c("#00007F", "blue", "#007FFF", "cyan", "#7FFF7F", 
-                                "yellow", "#FF7F00", "red", "#7F0000")),
-                        backgroundValues = NULL,
-                        backgroundColor = function(n){grDevices::rainbow(n,
-                                                                alpha=0.3)},
-                        backgroundLim = NULL,
-                        backgroundBreaks = NULL,
-                        thresholds=NULL,
-                        legend=TRUE,
-                        query=NULL,
-                        main=""){
+                      markers=fsom$map$colsUsed, 
+                      view="MST", #"grid","tSNE"
+                      colorPalette=grDevices::colorRampPalette(
+                        c("#00007F", "blue", "#007FFF", "cyan", "#7FFF7F", 
+                          "yellow", "#FF7F00", "red", "#7F0000")),
+                      starBg = "white",
+                      backgroundValues = NULL,
+                      backgroundColor = function(n){
+                        grDevices::rainbow(n, alpha=0.3)},
+                      backgroundLim = NULL,
+                      backgroundBreaks = NULL,
+                      backgroundSize = NULL,
+                      thresholds=NULL,
+                      legend=TRUE,
+                      query=NULL,
+                      main=""){
     # Add star chart option to iGraph
     add.vertex.shape("star", clip=igraph.shape.noclip, plot=mystar, 
                     parameters=list(vertex.data=NULL,vertex.cP = colorPalette,
-                                    vertex.scale=TRUE))
+                                    vertex.scale=TRUE, vertex.bg = starBg))
     
     if(is.null(thresholds)){
         # Use MFIs
         data <- fsom$map$medianValues[, markers,drop=FALSE]
+        scale <- TRUE
     } else {
         # scale thresholds same as data
         if(fsom$transform){
             warning("Thresholds should be given in the transformed space")
         }
-        thresholds = scale(t(thresholds), 
-                           center = fsom$scaled.center[markers],
-                           scale = fsom$scaled.scale[markers])
+        if(!is.null(fsom$scaled.center)){
+          thresholds <- scale(t(thresholds), 
+                              center = fsom$scaled.center[markers],
+                              scale = fsom$scaled.scale[markers])
+        }
         # Use pctgs of cells above threshold as star plot values
         data <-
             t(sapply(seq_len(fsom$map$nNodes), function(i) {
@@ -918,6 +1170,7 @@ PlotStars <- function(fsom,
                 }
                 res
             }))
+        scale <- FALSE
     }
     
     # Choose layout type
@@ -927,13 +1180,19 @@ PlotStars <- function(fsom,
         grid = { layout <- as.matrix(fsom$map$grid)
                     lty <- 0},
         tSNE = { layout <- fsom$MST$l2
-                    lty <- 0}
+                    lty <- 0}, 
+        stop("The view should be MST, grid or tSNE. tSNE will only work
+                   if you specified this when building the MST.")
     )
     
     # Choose background colour
-    if(!is.null(backgroundValues)){
+    if (!is.null(backgroundValues)) {
         background <- computeBackgroundColor(backgroundValues,backgroundColor,
                                              backgroundLim, backgroundBreaks)
+        if (is.null(backgroundSize)) { 
+          backgroundSize <- fsom$MST$size
+          backgroundSize[backgroundSize == 0] <- 3
+        }
     } else {
         background <- NULL
     }
@@ -971,20 +1230,20 @@ PlotStars <- function(fsom,
     
     # Plot the actual graph
     igraph::plot.igraph(fsom$MST$g, 
-        vertex.shape="star", 
-        vertex.label=NA, 
-        vertex.size=fsom$MST$size, 
-        vertex.data=data,
-        vertex.cP=colorPalette(ncol(data)),
-        vertex.scale=TRUE,
-        layout=layout, 
-        edge.lty=lty,  
-        mark.groups=background$groups, 
-        mark.col=background$col[background$values], 
-        mark.border=background$col[background$values],
-        main=main
+                        vertex.shape = "star", 
+                        vertex.label = NA, 
+                        vertex.size = fsom$MST$size, 
+                        vertex.data = data,
+                        vertex.cP = colorPalette(ncol(data)),
+                        vertex.scale = scale,
+                        layout = layout, 
+                        edge.lty = lty,  
+                        mark.groups = background$groups, 
+                        mark.col = background$col[background$values], 
+                        mark.border = background$col[background$values],
+                        mark.expand	= backgroundSize,
+                        main=main
     )
-    
     # Reset plot window
     graphics::par(oldpar)
     graphics::layout(1)
@@ -993,9 +1252,9 @@ PlotStars <- function(fsom,
 
 
 
-###############
+##############
 ## PlotNode ##
-###############
+##############
 #' Plot star chart
 #' 
 #' Plot a star chart indicating median marker values of a single node
@@ -1017,7 +1276,7 @@ PlotStars <- function(fsom,
 #' 
 #' @examples
 #'    # Read from file, build self-organizing map and minimal spanning tree
-#'    fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+#'    fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 #'    flowSOM.res <- FlowSOM(fileName, compensate=TRUE,transform=TRUE,
 #'                             scale=TRUE,colsToUse=c(9,12,14:18),nClus=10)
 #'    
@@ -1040,9 +1299,11 @@ PlotNode <- function(fsom, id,
     n <- length(markers)
     
     if(is.function(colorPalette)){colorPalette <- colorPalette(n)}
-    data <- rbind(apply(fsom$map$medianValues[, markers,drop=FALSE],2,min),
+    data <- rbind(apply(fsom$map$medianValues[, markers,drop=FALSE],2,min, 
+                        na.rm = TRUE),
                   fsom$map$medianValues[id, markers,drop=FALSE],
-                  apply(fsom$map$medianValues[, markers,drop=FALSE],2,max))
+                  apply(fsom$map$medianValues[, markers,drop=FALSE],2,max, 
+                        na.rm = TRUE))
     coords <- matrix(c(100,0,100,100,0,100),nrow=3)
     
     print(data)
@@ -1095,11 +1356,11 @@ PlotNode <- function(fsom, id,
 # #'                 option was selected while building the MST)
 # #' @param colorPalette      Colorpalette to be used for the markers
 # #' @param backgroundValues  Values to be used for background coloring, either
-# #'                          numerical values or something that can be made into
-# #'                          a factor (e.g. a clustering)
-# #' @param backgroundColor   Colorpalette to be used for the background coloring
-# #'                          . Can be either a function or an array specifying
-# #'                          colors
+# #'                          numerical values or something that can be made 
+# #'                          into a factor (e.g. a clustering)
+# #' @param backgroundColor   Colorpalette to be used for the background 
+# #'                          coloring. Can be either a function or an array 
+# #'                          specifying colors
 # #' @param backgroundLim     Only used when backgroundValues are numerical. 
 # #'                          Defaults to min and max of the backgroundValues.
 # #' @param legend   Logical, if TRUE add a legend
@@ -1115,7 +1376,7 @@ PlotNode <- function(fsom, id,
 # #' 
 # #' @examples
 # #'    # Read from file, build self-organizing map and minimal spanning tree
-# #'    fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+# #'    fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 # #'    flowSOM.res <- ReadInput(fileName, compensate=TRUE,transform=TRUE,
 # #'                             scale=TRUE)
 # #'    flowSOM.res <- BuildSOM(flowSOM.res,colsToUse=c(9,12,14:18))
@@ -1137,7 +1398,7 @@ PlotNode <- function(fsom, id,
 #                         backgroundColor = function(n){grDevices::rainbow(n,
 #                                                                 alpha=0.3)},
 #                         backgroundLim = NULL,
-#                         # colorRampPalette(c("#FFFFFF","#FF000077"),alpha=TRUE)
+#                         #colorRampPalette(c("#FFFFFF","#FF000077"),alpha=TRUE)
 #                         legend=TRUE,
 #                         query=NULL,
 #                         main=""){
@@ -1298,7 +1559,7 @@ PlotNode <- function(fsom, id,
 #' 
 #' @examples
 #'    # Read from file, build self-organizing map and minimal spanning tree
-#'    fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+#'    fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 #'    flowSOM.res <- ReadInput(fileName, compensate=TRUE,transform=TRUE,
 #'                             scale=TRUE)
 #'    flowSOM.res <- BuildSOM(flowSOM.res,colsToUse=c(9,12,14:18))
@@ -1341,6 +1602,89 @@ PlotClusters2D <- function(fsom, marker1, marker2, nodes,
     #cat(nodes,": \n",table(m[fsom$map$mapping[,1] %in% nodes]),"\n")
 }
 
+####################
+## PlotOverview2D ##
+####################
+#' Plot metaclusters on scatter plots
+#' 
+#' Write multiple 2D scatter plots to a png file. 
+#' All cells of fsom$data are plotted in black, and those of the selected 
+#' metaclusters are plotted in color.
+#'  
+#' @param fsom         FlowSOM object, as generated by \code{\link{FlowSOM}}.
+#'                     If using a FlowSOM object as generated by 
+#'                     \code{\link{BuildMST}}, it needs to be wrapped in a list,
+#'                     list(FlowSOM = fsom, metaclustering = metaclustering).
+#' @param markerlist   List in which each element is a pair of marker names
+#' @param metaclusters Metaclusters of interest
+#' @param colors       Named vector with color value for each metacluster. 
+#'                     If NULL (default) colorbrewer "paired" is interpolated
+#' @param ff           flowFrame to use as reference for the marker names
+#' @param ...     Other parameters to pass on to PlotClusters2D
+#'
+#' @return Nothing is returned, but a plot is drawn for every markerpair and
+#'         every metacluster. The individual cells are colored, and the 
+#'         center of each FlowSOM cluster is indicated with a blue cross.
+#' @seealso \code{\link{PlotClusters2D}}
+#' 
+#' @examples
+#'    # Read from file, build self-organizing map and minimal spanning tree
+#'    fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
+#'    flowSOM.res <- FlowSOM(fileName, 
+#'                           compensate=TRUE, transform=TRUE, scale=TRUE,
+#'                           colsToUse=c(9,12,14:18),
+#'                           nClus = 10,
+#'                           seed = 1)
+#'                           
+#'    # Plot cells
+#'    markers_of_interest = list(c("FSC-A", "SSC-A"),
+#'                               c("CD3", "CD19"),
+#'                               c("TCRb", "TCRyd"),
+#'                               c("CD4", "CD8"))
+#'    metaclusters_of_interest = 1:10
+#'    
+#'    # Recommended to write to png
+#'    
+#'    png("Markeroverview.png",
+#'        width = 500 * length(markers_of_interest),
+#'        height = 500 * length(metaclusters_of_interest))
+#'    PlotOverview2D(flowSOM.res,
+#'                   markerlist = markers_of_interest,
+#'                   metaclusters = metaclusters_of_interest,
+#'                   pchCluster = 19,
+#'                   ff = flowCore::read.FCS(fileName))
+#'    dev.off()
+#'
+#' @export
+PlotOverview2D <- function(fsom, 
+                           markerlist, 
+                           metaclusters,
+                           colors = NULL,
+                           ff,
+                           ...){
+  graphics::layout(matrix(seq_len(length(markerlist) * length(metaclusters)), 
+                nrow = length(metaclusters)))
+  if(is.null(colors)){
+    colors <- RColorBrewer::brewer.pal(length(metaclusters),
+                                       "Paired")
+    names(colors) <- as.character(metaclusters)
+  }
+  
+  for(marker_pair in markerlist){
+    for(metacluster in metaclusters){
+      PlotClusters2D(fsom$FlowSOM,
+                     marker1 = get_channels(ff, marker_pair[1]),
+                     marker2 = get_channels(ff, marker_pair[2]),
+                     nodes = which(fsom$metaclustering == metacluster),
+                     main = paste0("Metacluster ", metacluster),
+                     col = colors[as.character(metacluster)],
+                     ...)
+    }
+  }
+  
+  graphics::layout(1)
+}
+
 #################
 ## PlotCenters ##
 #################
@@ -1360,7 +1704,7 @@ PlotClusters2D <- function(fsom, marker1, marker2, nodes,
 #'          
 #' @examples
 #'    # Read from file, build self-organizing map and minimal spanning tree
-#'    fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+#'    fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 #'    flowSOM.res <- ReadInput(fileName, compensate=TRUE,transform=TRUE,
 #'                             scale=TRUE)
 #'    flowSOM.res <- BuildSOM(flowSOM.res,colsToUse=c(9,12,14:18))
@@ -1409,7 +1753,7 @@ PlotCenters <- function(fsom, marker1, marker2, MST=TRUE){
 #' 
 #' @examples
 #'    # Read two files (Artificially, as we just split 1 file in 2 subsets)
-#'    fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+#'    fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 #'    ff1 <- flowCore::read.FCS(fileName)[1:1000,]
 #'    ff1@@description$FIL <- "File1"
 #'    ff2 <- flowCore::read.FCS(fileName)[1001:2000,]
@@ -1432,12 +1776,9 @@ FlowSOMSubset <- function(fsom,ids){
     fsom_tmp <- fsom
     fsom_tmp$data <- fsom$data[ids,]
     fsom_tmp$map$mapping <- fsom$map$mapping[ids,]
-    aggr <- stats::aggregate(fsom_tmp$data,
-                            by=list(fsom_tmp$map$mapping[,1]),mean)
-    fsom_tmp$map$medianValues <- matrix(0,nrow = nrow(fsom$map$grid),
-                                    ncol = ncol(fsom$map$medianValues))
-    fsom_tmp$map$medianValues[aggr[,1],] <- as.matrix(aggr[,-1])
+    fsom_tmp <- UpdateDerivedValues(fsom_tmp)
     UpdateNodeSize(fsom_tmp)
+    return(fsom_tmp)
 }
 
 #############
@@ -1445,66 +1786,275 @@ FlowSOMSubset <- function(fsom,ids){
 #############
 #' Map new data to a FlowSOM grid
 #'
-#' New data from a flowframe is mapped to an existing FlowSOM 
-#' object. A new FlowSOM object is created, with the same grid, but a new
-#' mapping, node sizes and mean values. We assume the data is already
-#' compensated and transformed, but not scaled yet. The same scaling parameters
-#' as from the original grid will be used.
+#' New data is mapped to an existing FlowSOM object. The input is similar to the
+#' readInput function.
+#' A new FlowSOM object is created, with the same grid, but a new
+#' mapping, node sizes and mean values. The same preprocessing steps
+#' (compensation, tranformation and scaling) will happen to this file as was 
+#' specified in the original FlowSOM call. The scaling parameters from the 
+#' original grid will be used.
 #'
-#' @param fsom FlowSOM object
-#' @param ff   Flow frame with the data to map
+#' @param fsom          FlowSOM object
+#' @param input         A flowFrame, a flowSet or an array of paths to files 
+#'                      or directories   
+#' @param mad_allowed   A warning is generated if the distance of the new
+#'                      data points to their closest cluster center is too
+#'                      big. This is computed based on the typical distance
+#'                      of the points from the original dataset assigned to
+#'                      that cluster, the threshold being set to
+#'                      median + mad_allowed * MAD. Default is 4.
+#' @param compensate    logical, does the data need to be compensated. If NULL,
+#'                      the same value as in the original FlowSOM call will be 
+#'                      used.
+#' @param spillover     spillover matrix to compensate with. If NULL,
+#'                      the same value as in the original FlowSOM call will be 
+#'                      used.
+#' @param transform     logical, does the data need to be transformed. If NULL,
+#'                      the same value as in the original FlowSOM call will be 
+#'                      used.
+#' @param toTransform   column names or indices that need to be transformed.
+#'                      If NULL, the same value as in the original FlowSOM call
+#'                      will be used.
+#' @param transformFunction  If NULL, the same value as in the original FlowSOM 
+#'                           call will be used.
+#' @param scale         Logical, does the data needs to be rescaled. If NULL, 
+#'                      the same value as in the original FlowSOM call will be 
+#'                      used.
+#' @param scaled.center See \code{\link{scale}}. If NULL, the same value as in 
+#'                      the original FlowSOM call will be used.
+#' @param scaled.scale  See \code{\link{scale}}. If NULL, the same value as in 
+#'                      the original FlowSOM call will be used.
 #'        
 #' @return A new FlowSOM object
 #' @seealso \code{\link{FlowSOMSubset}} if you want to get a subset of the
 #'          current data instead of a new dataset
 #' @examples 
 #'  # Build FlowSom result
-#'  fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+#'  fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 #'    ff <- flowCore::read.FCS(fileName)
 #'    ff <- flowCore::compensate(ff,ff@@description$SPILL)
 #'    ff <- flowCore::transform(ff,
 #'              flowCore::transformList(colnames(ff@@description$SPILL),
-#'                                     flowCore::logicleTransform()))
-#'    flowSOM.res <- FlowSOM(ff[1:1000,],scale=TRUE,colsToUse=c(9,12,14:18),
-#'                           maxMeta=10)
+#'                                      flowCore::logicleTransform()))
+#'    flowSOM.res <- FlowSOM(ff[1:1000,], scale=TRUE, colsToUse=c(9,12,14:18),
+#'                           nClus=10)
 #'    
 #'    # Map new data
-#'    fSOM2 <- NewData(flowSOM.res[[1]], ff[1001:2000,])
+#'    fSOM2 <- NewData(flowSOM.res, ff[1001:2000,])
 #'
 #' @export
-NewData <- function(fsom,ff){
-    fsom_tmp <- fsom
+NewData <- function(fsom, 
+                    input,
+                    mad_allowed = 4,
+                    compensate = NULL, 
+                    spillover = NULL,
+                    transform = NULL, 
+                    toTransform = NULL, 
+                    transformFunction = NULL,
+                    scale = NULL, 
+                    scaled.center = NULL, 
+                    scaled.scale = NULL){
+  
+  if (class(fsom) == "list" & !is.null(fsom$FlowSOM)) {
+    fsom_o <- fsom
+    fsom <- fsom$FlowSOM 
+  }
+  if (class(fsom) != "FlowSOM") {
+    stop("fsom should be a FlowSOM object.")
+  }
+  
+  if(is.null(compensate)){
+    compensate <- fsom$compensate
+  }
+  if(is.null(spillover)){
+    spillover <- fsom$spillover
+  }
+  if(is.null(transform)){
+    transform <- fsom$transform
+  }
+  if(is.null(toTransform)){
+    toTransform <- fsom$toTransform
+  }
+  if(is.null(transformFunction)){
+    transformFunction <- fsom$transformFunction
+  }
+  if(is.null(scale)){
+    scale <- fsom$scale
+  }
+  if(is.null(scaled.center)){
+    scaled.center <- fsom$scaled.center
+  }
+  if(is.null(scaled.scale)){
+    scaled.scale <- fsom$scaled.scale
+  }
     
-    if(fsom$compensate){
-        ff <- flowCore::compensate(ff,fsom$spillover)    
-    }
-    if(fsom$transform){
-        ff <- flowCore::transform(ff,flowCore::transformList(
-            BiocGenerics::colnames(ff[,fsom$toTransform]),
-            fsom$transformFunction))
-    }
+    fsom_new <- ReadInput(input, 
+                          compensate = compensate, spillover = spillover,
+                          transform = transform, toTransform = toTransform,
+                          transformFunction = transformFunction, 
+                          scale = scale, scaled.center = scaled.center,
+                          scaled.scale = scaled.scale)
     
-    if(fsom$scale){
-        newData <- scale(exprs(ff),
-                        center = fsom$scaled.center[
-                            BiocGenerics::colnames(ff)],
-                        scale = fsom$scaled.scale[
-                            BiocGenerics::colnames(ff)])
+    fsom_new$map <- fsom$map
+    fsom_new$MST <- fsom$MST
+    
+    fsom_new$map$mapping <- MapDataToCodes(fsom$map$codes,fsom_new$data)
+    fsom_new <- UpdateDerivedValues(fsom_new)
+    fsom_new <- UpdateNodeSize(fsom_new)
+    
+    test_outliers <- TestOutliers(fsom_new,
+                                  mad_allowed = mad_allowed,
+                                  fsom_reference = fsom)
+    max_outliers <- max(test_outliers$Number_of_outliers) 
+    n_outliers <- sum(test_outliers$Number_of_outliers) 
+    if(max_outliers > 100){
+      warning(n_outliers, 
+              " cells (",
+              round(n_outliers / nrow(fsom_new$data) * 100, 2),
+              "%) seem far from their cluster centers.")
+    }
+   
+    if(exists("fsom_o")){
+      return(list(FlowSOM = fsom_new,
+                  metaclustering = fsom_o$metaclustering))
     } else {
-        newData <- exprs(ff)
+      return(fsom_new)
     }
-    
-    fsom_tmp$data <- newData
-    fsom_tmp$map$mapping <- MapDataToCodes(fsom$map$codes,newData)
-    aggr <- stats::aggregate(fsom_tmp$data,
-                            by=list(fsom_tmp$map$mapping[,1]),mean)
-    fsom_tmp$map$medianValues <- matrix(NA,nrow = nrow(fsom$map$grid),
-                                    ncol = ncol(fsom$map$medianValues),
-                                    dimnames=list(NULL,
-                                            colnames(fsom$map$medianValues)))
-    fsom_tmp$map$medianValues[aggr[,1],colnames(aggr[,-1])] <- 
-        as.matrix(aggr[,-1])
-    UpdateNodeSize(fsom_tmp)
+}
+
+##################
+## TestOutliers ##
+##################
+#' Test if any cells are too far from their cluster centers
+#'
+#' For every cluster, the distance from the cells to the cluster centers is
+#' used to label cells which deviate too far as outliers. The threshold is
+#' chosen as the median distance + \code{mad_allowed} times the median absolute
+#' deviation of the distances. 
+#'
+#' @param fsom  FlowSOM object
+#' @param mad_allowed Number of median absolute deviations allowed. Default = 4.
+#' @param fsom_reference FlowSOM object to use as reference. If NULL (default),
+#'                       the original fsom object is used.
+#' @param plot Should a plot be generated showing the distribution of the
+#'             distances. Default is FALSE.
+#' @param img_file If plot is TRUE, the output will be written to this file.
+#'                 Default is "testOutliers.pdf"
+#'        
+#' @return A new FlowSOM object
+#' @seealso \code{\link{FlowSOMSubset}} if you want to get a subset of the
+#'          current data instead of a new dataset
+#' @examples 
+#'  # Build FlowSom result
+#'  fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
+#'  ff <- flowCore::read.FCS(fileName)
+#'  flowSOM.res <- FlowSOM(ff,
+#'                         compensate = TRUE, transform = TRUE, scale = TRUE,
+#'                         colsToUse = c(9, 12, 14:18),
+#'                         maxMeta = 10)
+#'    
+#'  # Map new data
+#'  outlier_report <- TestOutliers(flowSOM.res)
+#'
+#' @export
+TestOutliers <- function(fsom, 
+                         mad_allowed = 4,
+                         fsom_reference = NULL,
+                         plot = FALSE,
+                         img_file = "testOutliers.pdf"){
+  
+  if (class(fsom) == "list" & !is.null(fsom$FlowSOM)) {
+    fsom <- fsom$FlowSOM 
+  }
+  if (class(fsom) != "FlowSOM") {
+    stop("fsom should be a FlowSOM object.")
+  }
+  
+  if(is.null(fsom_reference)){
+    fsom_reference <- fsom
+  } else {
+    if (class(fsom_reference) == "list" & !is.null(fsom_reference$FlowSOM)) {
+      fsom_reference <- fsom_reference$FlowSOM 
+    }
+    if (class(fsom_reference) != "FlowSOM") {
+      stop("fsom should be a FlowSOM object.")
+    }
+  }
+  
+  distances_median <- sapply(seq_len(fsom_reference$map$nNodes),
+                             function(x){
+                               ids <- which(GetClusters(fsom_reference) == x)
+                               if(length(ids) > 0){
+                                 m <- stats::median(
+                                   fsom_reference$map$mapping[ids, 2])
+                               } else {
+                                 m <- 0
+                               }
+                               return(m)
+                             })
+  
+  distances_mad <- sapply(seq_len(fsom_reference$map$nNodes),
+                             function(x){
+                               ids <- which(GetClusters(fsom_reference) == x)
+                               if(length(ids) > 0){
+                                 m <- stats::mad(
+                                   fsom_reference$map$mapping[ids, 2])
+                               } else {
+                                 m <- 0
+                               }
+                               return(m)
+                             })
+  
+  thresholds <- distances_median + mad_allowed * distances_mad
+  
+  max_distances_new <- sapply(seq_len(fsom$map$nNodes),
+                          function(x){
+                            ids <- which(GetClusters(fsom) == x)
+                            if(length(ids) > 0){
+                              m <- max(fsom$map$mapping[ids, 2])
+                            } else {
+                              m <- 0
+                            }
+                            return(m)
+                          })
+  
+  outliers <- sapply(seq_len(fsom$map$nNodes),
+                     function(x){
+                       ids <- which(GetClusters(fsom) == x)
+                       distances <- fsom$map$mapping[ids, 2]
+                       return(sum(distances > thresholds[x]))
+                     })
+  if(plot){
+    grDevices::pdf(img_file, width = 20, height = 20)
+    xdim <- fsom$map$xdim
+    ydim <- fsom$map$ydim
+    graphics::layout(matrix(1:(xdim*ydim), nrow = xdim))
+    for(i in 1:(xdim*ydim)){
+      ids <- which(GetClusters(fsom) == i)
+      values <- fsom$map$mapping[ids, 2]
+        if(length(values) > 1){
+          nOutliers <- sum(values > thresholds[i])
+          graphics::hist(values, main = paste0(i," (", nOutliers,")"), 
+                         xlab = "")
+          graphics::abline(v = distances_median[i], col = "black", lwd = 2)
+          graphics::abline(v = thresholds[i], col = "red", lwd = 2)
+        } else {
+          graphics::plot.new()
+        }
+    }
+    grDevices::dev.off()
+  }
+  
+  result <- data.frame(
+    "Median_distance" = distances_median, 
+    "Median_absolute_deviation" = distances_mad, 
+    "Threshold" = thresholds, 
+    "Number_of_outliers" = outliers,
+    "Maximum_outlier_distance" = max_distances_new)[outliers > 0, ]
+  
+  result <- result[order(outliers[outliers > 0], decreasing = TRUE), ]
+  
+  return(result)
 }
 
 ################
@@ -1519,8 +2069,6 @@ NewData <- function(fsom,ff){
 #' @param fsom    FlowSOM object, as generated by \code{\link{BuildMST}} or
 #'        the first list item of \code{\link{FlowSOM}}
 #' @param groups  groups result as generated by \code{\link{CountGroups}}
-#' @param view     Preferred view, options: "MST", "grid" or "tSNE" (if this
-#'                 option was selected while building the MST)
 #' @param tresh   Relative difference in groups before the node is coloured
 #' @param p_tresh Threshold on p-value from wilcox-test before the node is
 #'        coloured. If this is not NULL, tresh will be ignored.
@@ -1550,95 +2098,83 @@ NewData <- function(fsom,ff){
 #'    # annotation <- PlotGroups(fsom[[1]],groups_res)
 #'    
 #' @export
-PlotGroups <- function(fsom,groups,view="MST",tresh = 0.5, p_tresh=NULL, 
-                        heatmap=FALSE,...){
-    groupnames <- rownames(groups$means)
+PlotGroups <- function(fsom, groups,
+                       tresh = NULL, p_tresh = 0.05, 
+                       heatmap = FALSE, ...){
     
-    fsom <- UpdateNodeSize(fsom,reset=TRUE)
-    fsom$MST$size <- fsom$MST$size * groups$means_norm[[groupnames[1]]]
-    PlotStars(fsom,main=groupnames[1],view=view,...)
-    
-    annotation <- list()
-    if(!heatmap){
-        if(! is.null(p_tresh)){
-            values <- groups$pctgs
-            for(group in groupnames[-1]){
-                score <- rep(NA,ncol(values))
-                for(i in seq_len(ncol(values))){
-                    test <- stats::wilcox.test(values[groups$groups %in% 
-                                            groupnames[1],i],
-                                        values[groups$groups %in% group,i])
-                    #boxplot(counts[1:5,i],counts[11:15,i],main=test$p.value)
-                    adj_p <- stats::p.adjust(test$p.value,"BH")
-                    diff <- groups$means[group,i] - 
-                        groups$means[groupnames[1],i]
-                    score[i] <- 1 + (adj_p < p_tresh) + 
-                        (diff > 0 & adj_p < p_tresh)
-                }
-                annotation[[group]] <- factor(c("--",
-                                                groupnames[1],
-                                                group)[score],
-                                            levels=c("--",groupnames[1],group))
-            }
-            
-        } else {
-            for(group in groupnames[-1]){
-                diff <- groups$means[group,] - groups$means[1,]
-                values <- abs(diff) / 
-                    apply(groups$means[c(groupnames[1],group),],2,max)
-                annotation[[group]] <- as.factor(c("--",groupnames[1],group)[
-                    1 + (values > tresh) + (diff > 0 & values > tresh)])
-            }
-        }
-        
-        for(group in groupnames[-1]){
-            fsom <- UpdateNodeSize(fsom,reset=TRUE)
-            fsom$MST$size <- fsom$MST$size * groups$means_norm[[group]]
-            PlotStars(fsom,backgroundValues = annotation[[group]],main=group,
-                        view=view,
-                        backgroundColor = grDevices::colorRampPalette(
-                        c("#FFFFFF","#00FFFF55","#FF000055"),alpha=TRUE),...)
-        }
+  groupnames <- rownames(groups$means)
+  annotation <- list()
+  
+  # Compare all groups with the first one
+  for(group in groupnames[-1]){
+    if (!is.null(p_tresh) & is.null(tresh)) {
+      # Comparing the percentages of the individual samples,
+      # using a wilcox test
+      values <- groups$pctgs
+      p_v <- rep(NA, ncol(values))
+      for(i in seq_len(ncol(values))){
+        test <- stats::wilcox.test(
+          values[groups$groups %in% groupnames[1], i],
+          values[groups$groups %in% group, i],
+          exact = FALSE)
+        p_v[i] <- test$p.value
+      }
+      diff <- groups$means[group,] - groups$means[groupnames[1],]
+      adj_p <- stats::p.adjust(p_v, "BH")
+      
+      if(heatmap){ 
+        score <- log10(adj_p) * (-1)^(diff < 0)
+        annotation[[group]] <- score
+      } else{
+        score <- 1 + (adj_p < p_tresh) + (diff > 0 & adj_p < p_tresh)
+        annotation[[group]] <- factor(c("--",
+                                        groupnames[1],
+                                        group)[score],
+                                      levels=c("--",groupnames[1],group))
+      }
+      
+    } else if (is.null(p_tresh) & !is.null(tresh)) {
+      # Using fold change of the mean per group
+      diff <- groups$means[group,] - groups$means[1,]
+      values <- (apply(groups$means[c(groupnames[1],group),],2,max) / 
+                   apply(groups$means[c(groupnames[1],group),],2,min))
+      
+      if (heatmap) {
+        annotation[[group]] <- values * (-1)^(diff < 0)
+      } else {
+        annotation[[group]] <- as.factor(c("--",groupnames[1],group)[
+          1 + (values > tresh) + (diff > 0 & values > tresh)])
+      }
     } else {
-        if(! is.null(p_tresh)){
-            values <- groups$pctgs
-            for(group in groupnames[-1]){
-                score <- rep(NA,ncol(values))
-                for(i in seq_len(ncol(values))){
-                    test <- stats::wilcox.test(values[groups$groups %in% 
-                                            groupnames[1],i],
-                                        values[groups$groups %in% group,i])
-                    #boxplot(counts[1:5,i],counts[11:15,i],main=test$p.value)
-                    adj_p <- stats::p.adjust(test$p.value,"BH")
-                    diff <- groups$means[group,i] - 
-                        groups$means[groupnames[1],i]
-                    score[i] <- adj_p * (-1)^(diff < 0)
-                }
-                annotation[[group]] <- score
-            }
-            
-        } else {
-            for(group in groupnames[-1]){
-                #diff <- groups$means[group,] - groups$means[1,]
-                #values <- abs(diff) / 
-                #    apply(groups$means[c(groupnames[1],group),],2,max)
-                values <- (apply(groups$means[c(groupnames[1],group),],2,max) / 
-                        apply(groups$means[c(groupnames[1],group),],2,min)) -1
-                annotation[[group]] <- values * (-1)^(diff < 0)
-            }
-        }
-        
-        for(group in groupnames[-1]){
-            fsom <- UpdateNodeSize(fsom,reset=TRUE)
-            fsom$MST$size <- fsom$MST$size * groups$means_norm[[group]]
-            clusterCols <- grDevices::colorRampPalette(c("#FFFFFF","#FF000077"),
-                                            alpha=TRUE)(49)[
-                                                order(annotation[[group]])]
-            PlotStars(fsom,backgroundValues =annotation[[group]],main=group,
-                    view=view,backgroundColor =clusterCols,...)
-        }
+      stop("Please use only tresh or p_tresh, not both.")
     }
-    annotation
+  }
+  
+  # Plot the first group
+  fsom <- UpdateNodeSize(fsom, reset=TRUE)
+  fsom$MST$size <- fsom$MST$size * groups$means_norm[[groupnames[1]]]
+  PlotStars(fsom,
+            main = groupnames[1],
+            ...)
+  
+  if(!heatmap){
+    backgroundColors <- grDevices::colorRampPalette(
+      c("#FFFFFF22","#00FFFF55","#FF000055"),alpha=TRUE)
+  } else {
+    backgroundColors <- grDevices::colorRampPalette(c("#FFFFFF","#FF000077"),
+                                               alpha=TRUE)(49)[
+                                                 order(annotation[[group]])]
+  }
+  # Plot the others with background annotation
+  for(group in groupnames[-1]){
+    fsom <- UpdateNodeSize(fsom,reset=TRUE)
+    fsom$MST$size <- fsom$MST$size * groups$means_norm[[group]]
+    PlotStars(fsom, backgroundValues = annotation[[group]],
+              main = group,
+              backgroundColor = backgroundColors)
+  }
+  
+  annotation
 }
 
 ###################
@@ -1661,7 +2197,7 @@ PlotGroups <- function(fsom,groups,view="MST",tresh = 0.5, p_tresh=NULL,
 #' @return A list, containing the ids of the selected nodes, the individual
 #'         scores for all nodes and the scores for each marker for each node
 #' @examples
-#'    file <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+#'    file <- system.file("extdata", "68983.fcs", package="FlowSOM")
 #'    # Use the wrapper function to build a flowSOM object (saved in fsom[[1]])
 #'    # and a metaclustering (saved in fsom[[2]])
 #'    fsom <- FlowSOM(file,compensate = TRUE, transform = TRUE,scale = TRUE,

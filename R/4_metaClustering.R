@@ -4,12 +4,8 @@
 #' several algorithms
 #'
 #' @param data   Matrix containing the data to cluster
-#' @param method Clustering method to use, given as a string. Options are
-#'               metaClustering_consensus,metaClustering_hclust,
-#'               metaClustering_kmeans,metaClustering_som
+#' @param method Clustering method to use
 #' @param max    Maximum number of clusters to try out
-#' @param nClus  Exact number of clusters to use. If not NULL, max will be
-#'               ignored.
 #' @param ...    Extra parameters to pass along
 #' 
 #' @return Numeric array indicating cluster for each datapoint
@@ -17,7 +13,7 @@
 #'
 #' @examples
 #'    # Read from file, build self-organizing map and minimal spanning tree
-#'    fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+#'    fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 #'    flowSOM.res <- ReadInput(fileName, compensate=TRUE,transform=TRUE,
 #'                             scale=TRUE)
 #'    flowSOM.res <- BuildSOM(flowSOM.res,colsToUse=c(9,12,14:18))
@@ -32,12 +28,10 @@
 #'    flowSOM.clustering <- metacl[flowSOM.res$map$mapping[,1]]    
 #'
 #' @export
-MetaClustering <- function(data,method,max=20,nClus=NULL,...){
-    if(is.null(nClus)){
-        nClus <- DetermineNumberOfClusters(data,max,method,...)
-    }
+MetaClustering <- function(data,method,max=20,...){
+    res <- DetermineNumberOfClusters(data,max,method,...)
     method <- get(method)
-    method(data,k=nClus)
+    method(data,k=res)
 }
 
 DetermineNumberOfClusters <- function(data,max,method,plot=FALSE,smooth=0.2,
@@ -112,7 +106,7 @@ findElbow <- function(data){
 #' @seealso \code{\link{MetaClustering}}
 #' @examples
 #'    # Read from file, build self-organizing map and minimal spanning tree
-#'    fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+#'    fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 #'    flowSOM.res <- ReadInput(fileName, compensate=TRUE,transform=TRUE,
 #'                             scale=TRUE)
 #'    flowSOM.res <- BuildSOM(flowSOM.res,colsToUse=c(9,12,14:18))
@@ -158,8 +152,8 @@ metaClustering_kmeans <- function(data, k=7){
 }
 
 metaClustering_som <- function(data, k=7){
-    s <- SOM(data,xdim=k,ydim=1,rlen=100,silent = TRUE)
-    s$mapping[,1]
+    s <- SOM(data,xdim=k,ydim=1,rlen=100)
+    s$unit.classif
 }
 
 SSE <- function(data,clustering){
@@ -209,4 +203,66 @@ FMeasure <- function(realClusters, predictedClusters,silent=FALSE){
     f <- 2*r*p / (r+p)
     f[is.na(f)] <- 0
     sum(apply(f,1,max) * (rowSums(a)/sum(a)))
+}
+
+#' MetaclusterMFIs
+#' 
+#' Compute the median fluorescence intensities for the metaclusters
+#'
+#' @param fsom Result of calling the FlowSOM function
+#' @return  Metacluster MFIs
+#' @examples
+#' fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
+#' ff <- flowCore::read.FCS(fileName)
+#' ff <- flowCore::compensate(ff,ff@@description$SPILL)
+#' ff <- flowCore::transform(ff,
+#'          flowCore::transformList(colnames(ff@@description$SPILL),
+#'                                 flowCore::logicleTransform()))
+#' flowSOM.res <- FlowSOM(ff,scale=TRUE,colsToUse=c(9,12,14:18),maxMeta=10)
+#' mfis <- MetaclusterMFIs(flowSOM.res)
+#' @export
+MetaclusterMFIs <- function(fsom){
+  MFIs <- t(sapply(seq_along(levels(fsom$metaclustering)), 
+                  function(i) {
+                    apply(subset(fsom$FlowSOM$data, 
+                                 fsom$metaclustering[
+                                   fsom$FlowSOM$map$mapping[,1]] == i),
+                          2,
+                          stats::median)
+                  }))
+  rownames(MFIs) <- seq_len(nrow(MFIs))
+  return(MFIs)
+}
+
+#' MetaclusterCVs
+#' 
+#' Compute the coefficient of variation for the metaclusters
+#'
+#' @param fsom Result of calling the FlowSOM function
+#' @return  Metacluster CVs
+#' @examples
+#' fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
+#' ff <- flowCore::read.FCS(fileName)
+#' ff <- flowCore::compensate(ff,ff@@description$SPILL)
+#' ff <- flowCore::transform(ff,
+#'          flowCore::transformList(colnames(ff@@description$SPILL),
+#'                                 flowCore::logicleTransform()))
+#' flowSOM.res <- FlowSOM(ff,scale=TRUE,colsToUse=c(9,12,14:18), nClus=10)
+#' cvs <- MetaclusterCVs(flowSOM.res)
+#' @export
+MetaclusterCVs <- function(fsom){
+  CVs <- t(sapply(seq_along(levels(fsom$metaclustering)), 
+                  function(i) {
+                    apply(subset(fsom$FlowSOM$data, 
+                                 fsom$metaclustering[
+                                   fsom$FlowSOM$map$mapping[,1]] == i),
+                          2,
+                          function(y){
+                            if(length(y) > 0 && mean(y) != 0){
+                              stats::sd(y)/mean(y)
+                            } else {
+                              NA
+                            }})
+                  }))
+  return(CVs)
 }

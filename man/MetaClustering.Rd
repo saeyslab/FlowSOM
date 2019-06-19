@@ -4,19 +4,14 @@
 \alias{MetaClustering}
 \title{MetaClustering}
 \usage{
-MetaClustering(data, method, max = 20, nClus = NULL, ...)
+MetaClustering(data, method, max = 20, ...)
 }
 \arguments{
 \item{data}{Matrix containing the data to cluster}
 
-\item{method}{Clustering method to use, given as a string. Options are
-metaClustering_consensus,metaClustering_hclust,
-metaClustering_kmeans,metaClustering_som}
+\item{method}{Clustering method to use}
 
 \item{max}{Maximum number of clusters to try out}
-
-\item{nClus}{Exact number of clusters to use. If not NULL, max will be
-ignored.}
 
 \item{...}{Extra parameters to pass along}
 }
@@ -29,7 +24,7 @@ several algorithms
 }
 \examples{
    # Read from file, build self-organizing map and minimal spanning tree
-   fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+   fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
    flowSOM.res <- ReadInput(fileName, compensate=TRUE,transform=TRUE,
                             scale=TRUE)
    flowSOM.res <- BuildSOM(flowSOM.res,colsToUse=c(9,12,14:18))

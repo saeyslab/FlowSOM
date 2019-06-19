@@ -4,36 +4,78 @@
 \alias{NewData}
 \title{Map new data to a FlowSOM grid}
 \usage{
-NewData(fsom, ff)
+NewData(fsom, input, mad_allowed = 4, compensate = NULL,
+  spillover = NULL, transform = NULL, toTransform = NULL,
+  transformFunction = NULL, scale = NULL, scaled.center = NULL,
+  scaled.scale = NULL)
 }
 \arguments{
 \item{fsom}{FlowSOM object}
 
-\item{ff}{Flow frame with the data to map}
+\item{input}{A flowFrame, a flowSet or an array of paths to files 
+or directories}
+
+\item{mad_allowed}{A warning is generated if the distance of the new
+data points to their closest cluster center is too
+big. This is computed based on the typical distance
+of the points from the original dataset assigned to
+that cluster, the threshold being set to
+median + mad_allowed * MAD. Default is 4.}
+
+\item{compensate}{logical, does the data need to be compensated. If NULL,
+the same value as in the original FlowSOM call will be 
+used.}
+
+\item{spillover}{spillover matrix to compensate with. If NULL,
+the same value as in the original FlowSOM call will be 
+used.}
+
+\item{transform}{logical, does the data need to be transformed. If NULL,
+the same value as in the original FlowSOM call will be 
+used.}
+
+\item{toTransform}{column names or indices that need to be transformed.
+If NULL, the same value as in the original FlowSOM call
+will be used.}
+
+\item{transformFunction}{If NULL, the same value as in the original FlowSOM 
+call will be used.}
+
+\item{scale}{Logical, does the data needs to be rescaled. If NULL, 
+the same value as in the original FlowSOM call will be 
+used.}
+
+\item{scaled.center}{See \code{\link{scale}}. If NULL, the same value as in 
+the original FlowSOM call will be used.}
+
+\item{scaled.scale}{See \code{\link{scale}}. If NULL, the same value as in 
+the original FlowSOM call will be used.}
 }
 \value{
 A new FlowSOM object
 }
 \description{
-New data from a flowframe is mapped to an existing FlowSOM 
-object. A new FlowSOM object is created, with the same grid, but a new
-mapping, node sizes and mean values. We assume the data is already
-compensated and transformed, but not scaled yet. The same scaling parameters
-as from the original grid will be used.
+New data is mapped to an existing FlowSOM object. The input is similar to the
+readInput function.
+A new FlowSOM object is created, with the same grid, but a new
+mapping, node sizes and mean values. The same preprocessing steps
+(compensation, tranformation and scaling) will happen to this file as was 
+specified in the original FlowSOM call. The scaling parameters from the 
+original grid will be used.
 }
 \examples{
  # Build FlowSom result
- fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+ fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
    ff <- flowCore::read.FCS(fileName)
    ff <- flowCore::compensate(ff,ff@description$SPILL)
    ff <- flowCore::transform(ff,
              flowCore::transformList(colnames(ff@description$SPILL),
-                                    flowCore::logicleTransform()))
-   flowSOM.res <- FlowSOM(ff[1:1000,],scale=TRUE,colsToUse=c(9,12,14:18),
-                          maxMeta=10)
+                                     flowCore::logicleTransform()))
+   flowSOM.res <- FlowSOM(ff[1:1000,], scale=TRUE, colsToUse=c(9,12,14:18),
+                          nClus=10)
    
    # Map new data
-   fSOM2 <- NewData(flowSOM.res[[1]], ff[1001:2000,])
+   fSOM2 <- NewData(flowSOM.res, ff[1001:2000,])
 
 }
 \seealso{

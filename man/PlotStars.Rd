@@ -5,11 +5,12 @@
 \title{Plot star charts}
 \usage{
 PlotStars(fsom, markers = fsom$map$colsUsed, view = "MST",
-  colorPalette = grDevices::colorRampPalette(c("#00007F", "blue", "#007FFF",
-  "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000")),
-  backgroundValues = NULL, backgroundColor = function(n) {    
-  grDevices::rainbow(n, alpha = 0.3) }, backgroundLim = NULL,
-  backgroundBreaks = NULL, thresholds = NULL, legend = TRUE,
+  colorPalette = grDevices::colorRampPalette(c("#00007F", "blue",
+  "#007FFF", "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000")),
+  starBg = "white", backgroundValues = NULL,
+  backgroundColor = function(n) {     grDevices::rainbow(n, alpha = 0.3)
+  }, backgroundLim = NULL, backgroundBreaks = NULL,
+  backgroundSize = NULL, thresholds = NULL, legend = TRUE,
   query = NULL, main = "")
 }
 \arguments{
@@ -22,6 +23,10 @@ the tree}
 option was selected while building the MST)}
 
 \item{colorPalette}{Colorpalette to be used for the markers}
+
+\item{starBg}{Background color inside the star circle. Default is "white".
+Can also be put to  "transparent" (as was the case for older 
+versions).}
 
 \item{backgroundValues}{Values to be used for background coloring, either
 numerical values or something that can be made into
@@ -37,6 +42,8 @@ Defaults to min and max of the backgroundValues.}
 \item{backgroundBreaks}{Breaks to pass on to \code{\link{cut}}, to split
 numerical background values. If NULL, the length of
 backgroundColor will be used (default 100).}
+
+\item{backgroundSize}{Size of the background circles. Default 15.}
 
 \item{thresholds}{Optional. Array containing a number for each of the 
 markers to be used as the split between high/low. 
@@ -61,7 +68,7 @@ a star chart indicating median marker values
 }
 \examples{
    # Read from file, build self-organizing map and minimal spanning tree
-   fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+   fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
    flowSOM.res <- ReadInput(fileName, compensate=TRUE,transform=TRUE,
                             scale=TRUE)
    flowSOM.res <- BuildSOM(flowSOM.res,colsToUse=c(9,12,14:18))

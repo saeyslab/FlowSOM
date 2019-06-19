@@ -28,7 +28,7 @@
 #' 
 #' @examples
 #' # Read from file
-#' fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+#' fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 #' flowSOM.res <- ReadInput(fileName, compensate=TRUE,transform=TRUE,
 #'                          scale=TRUE)
 #' 
@@ -74,6 +74,9 @@ ReadInput <- function(input, pattern=".fcs",
         for(i in seq_along(input)){
             fsom <- AddFlowFrame(fsom, input[[i]])    
         }
+    } else if(class(input) == "matrix"){
+      flowFrame <- flowCore::flowFrame(input)
+      fsom <- AddFlowFrame(fsom, flowFrame)
     } else if(class(input) == "character"){    
         # Replace all directories by the files they contain
         toAdd <- NULL
@@ -117,11 +120,23 @@ ReadInput <- function(input, pattern=".fcs",
     
     if(scale){
         if(!silent) message("Scaling the data\n")
-        fsom$data <- scale(fsom$data, scaled.center, scaled.scale)
-        fsom$scaled.center <- attr(fsom$data, "scaled:center")
-        attr(fsom$data, "scaled:center") <- NULL
-        fsom$scaled.scale <- attr(fsom$data, "scaled:scale") 
-        attr(fsom$data, "scaled:scale") <- NULL
+        if(!all(is.null(names(scaled.center)))){
+          cols_to_scale <- intersect(colnames(fsom$data), names(scaled.center))
+          sc <- scale(x = fsom$data[, cols_to_scale], 
+                      center = scaled.center[cols_to_scale], 
+                      scale = scaled.scale[cols_to_scale])
+          fsom$data[, cols_to_scale] <- sc
+          fsom$scaled.center <- attr(sc, "scaled:center")
+          fsom$scaled.scale <- attr(sc, "scaled:scale")
+        } else {
+          fsom$data <- scale(x = fsom$data, center = TRUE, scale = TRUE)
+
+          fsom$scaled.center <- attr(fsom$data, "scaled:center")
+          attr(fsom$data, "scaled:center") <- NULL
+          fsom$scaled.scale <- attr(fsom$data, "scaled:scale") 
+          attr(fsom$data, "scaled:scale") <- NULL
+        }
+
     }
     
     fsom
@@ -140,26 +155,28 @@ AddFlowFrame <- function(fsom, flowFrame){
     if(fsom$compensate){
         if(is.null(fsom$spillover)){
             if(!is.null(flowFrame@description$SPILL)){
-                fsom$spillover <- flowFrame@description$SPILL    
+                spillover <- flowFrame@description$SPILL    
             } else if (!is.null(flowFrame@description$`$SPILLOVER`)){
                 if(class(flowFrame@description$`$SPILLOVER`)=="matrix"){
-                    fsom$spillover = flowFrame@description$`$SPILLOVER`
-                    flowFrame@description$SPILL = fsom$spillover
+                    spillover <- flowFrame@description$`$SPILLOVER`
+                    flowFrame@description$SPILL <- spillover
                 } else {
                     spilloverStr <- strsplit(
                         flowFrame@description$`$SPILLOVER`,
                         ",")[[1]]
                     n <- as.numeric(spilloverStr[1])
-                    fsom$spillover <- t(matrix(as.numeric(spilloverStr[(n+2):
+                    spillover <- t(matrix(as.numeric(spilloverStr[(n+2):
                                                 length(spilloverStr)]),ncol=n))
-                    colnames(fsom$spillover) <- spilloverStr[2:(n+1)]
-                    flowFrame@description$SPILL <- fsom$spillover
+                    colnames(spillover) <- spilloverStr[2:(n+1)]
+                    flowFrame@description$SPILL <- spillover
                 }
             } else {
                 stop("No compensation matrix found")
             }
+        } else {
+          spillover <- fsom$spillover
         }
-        flowFrame <- flowCore::compensate(flowFrame, fsom$spillover)
+        flowFrame <- flowCore::compensate(flowFrame, spillover)
     }
     
     # Transform
@@ -176,18 +193,20 @@ AddFlowFrame <- function(fsom, flowFrame){
     }
     
     # Save pretty names for nicer visualisation later on
-    n <- flowFrame@parameters@data[, "name"]
-    d <- flowFrame@parameters@data[, "desc"]
-    d[is.na(d)] <- n[is.na(d)]
-    if(any(grepl("#",d))){
-        # Support for hashtag notation: 
-        # antibody#fluorochrome -> antibody (fluorochrome)
-        fsom$prettyColnames <- gsub("#(.*)$"," (\\1)",d)
-    } else {
-        fsom$prettyColnames <- paste(d, " <", n, ">", sep="")
+    if(is.null(fsom$prettyColnames)){
+        n <- flowFrame@parameters@data[, "name"]
+        d <- flowFrame@parameters@data[, "desc"]
+        d[is.na(d)] <- n[is.na(d)]
+        if(any(grepl("#",d))){
+            # Support for hashtag notation: 
+            # antibody#fluorochrome -> antibody (fluorochrome)
+            fsom$prettyColnames <- gsub("#(.*)$"," (\\1)",d)
+        } else {
+            fsom$prettyColnames <- paste(d, " <", n, ">", sep="")
+        }
+        names(fsom$prettyColnames) <- colnames(flowCore::exprs(flowFrame))
     }
-    names(fsom$prettyColnames) <- colnames(flowCore::exprs(flowFrame))
-    
+  
     # Add the data to the matrix
     f <- flowCore::exprs(flowFrame)
     attr(f, "ranges") <- NULL

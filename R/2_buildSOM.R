@@ -21,20 +21,20 @@
 #' @examples
 #' 
 #' # Read from file
-#' fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
-#' flowSOM.res <- ReadInput(fileName, compensate=TRUE,transform=TRUE,
+#' fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
+#' flowSOM.res <- ReadInput(fileName, compensate=TRUE, transform=TRUE,
 #'                          scale=TRUE)
 #' 
 #' # Build the Self-Organizing Map
 #' # E.g. with gridsize 5x5, presenting the dataset 20 times, 
 #' # no use of MST in neighbourhood calculations in between
-#' flowSOM.res <- BuildSOM(flowSOM.res,colsToUse=c(9,12,14:18),
-#'                         xdim=5,ydim=5,rlen=20)
+#' flowSOM.res <- BuildSOM(flowSOM.res, colsToUse=c(9,12,14:18),
+#'                         xdim=5, ydim=5, rlen=20)
 #' 
 #' # Build the minimal spanning tree and apply metaclustering
 #' flowSOM.res <- BuildMST(flowSOM.res)
 #' metacl <- MetaClustering(flowSOM.res$map$codes,
-#'                          "metaClustering_consensus",max=10)
+#'                          "metaClustering_consensus", max=10)
 #' 
 #' @export
 BuildSOM <- function(fsom, colsToUse=NULL, silent=FALSE, ...){
@@ -50,19 +50,40 @@ BuildSOM <- function(fsom, colsToUse=NULL, silent=FALSE, ...){
     
     fsom$map <- SOM(fsom$data[, colsToUse],silent=silent, ...)
     fsom$map$colsUsed <- colsToUse
-    fsom$map$medianValues <-
-        t(sapply(seq_len(fsom$map$nNodes), function(i) {
-            apply(subset(fsom$data, fsom$map$mapping[,1] == i),2,stats::median)
-        }))
-    fsom$map$medianValues[is.nan(fsom$map$medianValues)] <- 0 
-    colnames(fsom$map$medianValues) <- colnames(fsom$data)
-    fsom$map$sdValues <-
-        t(sapply(seq_len(fsom$map$nNodes), function(i) {
-            apply(subset(fsom$data, fsom$map$mapping[,1] == i),2,stats::sd)
-        }))
-    fsom$map$sdValues[is.nan(fsom$map$sdValues)] <- 0 
-    colnames(fsom$map$sdValues) <- colnames(fsom$data)
+    fsom <- UpdateDerivedValues(fsom)
     fsom
+}
+
+UpdateDerivedValues <- function(fsom){
+  fsom$map$medianValues <-
+    t(sapply(seq_len(fsom$map$nNodes), function(i) {
+      apply(subset(fsom$data, fsom$map$mapping[,1] == i),2,stats::median)
+    }))
+  fsom$map$medianValues[is.nan(fsom$map$medianValues)] <- NA 
+  colnames(fsom$map$medianValues) <- colnames(fsom$data)
+  
+  fsom$map$cvValues <-
+    t(sapply(seq_len(fsom$map$nNodes), function(i) {
+      apply(subset(fsom$data, fsom$map$mapping[,1] == i),
+            2,
+            function(y){
+              if(length(y) > 0 && mean(y) != 0){
+                stats::sd(y)/mean(y)
+              } else {
+                NA
+              }})
+    }))
+  fsom$map$cvValues[is.nan(fsom$map$cvValues)] <- NA 
+  colnames(fsom$map$medianValues) <- colnames(fsom$data)
+  
+  fsom$map$sdValues <-
+    t(sapply(seq_len(fsom$map$nNodes), function(i) {
+      apply(subset(fsom$data, fsom$map$mapping[,1] == i),2,stats::sd)
+    }))
+  fsom$map$sdValues[is.nan(fsom$map$sdValues)] <- 0 
+  colnames(fsom$map$sdValues) <- colnames(fsom$data)
+  
+  return(fsom)
 }
 
 #' Build a self-organizing map
@@ -75,6 +96,8 @@ BuildSOM <- function(fsom, colsToUse=NULL, silent=FALSE, ...){
 #' @param alpha Start and end learning rate
 #' @param radius Start and end radius
 #' @param init  Initialize cluster centers in a non-random way
+#' @param initf Use the given initialization function if init==T
+#'              (default: Initialize_KWSP)
 #' @param distf Distance function (1=manhattan, 2=euclidean, 3=chebyshev, 
 #'              4=cosine)
 #' @param silent If FALSE, print status updates
@@ -94,9 +117,15 @@ BuildSOM <- function(fsom, colsToUse=NULL, silent=FALSE, ...){
 
 SOM <- function (data, xdim=10, ydim=10, rlen=10, mst=1, alpha=c(0.05, 0.01),
                     radius = stats::quantile(nhbrdist, 0.67) * c(1, 0), 
-                    init=FALSE, distf=2, silent=FALSE, codes=NULL,
-                    importance = NULL) 
-{
+                    init=FALSE, initf=Initialize_KWSP, distf=2, silent=FALSE,
+                    codes=NULL, importance = NULL){
+    if (!is.null(codes)){
+      if((ncol(codes) != ncol(data)) | (nrow(codes) != xdim * ydim)){
+        stop("If codes is not NULL, it should have the same number of columns
+             as the data and the number of rows should correspond with 
+             xdim*ydim")
+      }
+    }
     
     if(!is.null(importance)){
         data <- data * rep(importance,each=nrow(data))
@@ -107,12 +136,12 @@ SOM <- function (data, xdim=10, ydim=10, rlen=10, mst=1, alpha=c(0.05, 0.01),
     nCodes <- nrow(grid)
     if(is.null(codes)){
         if(init){
-            starters <- Initialize(data, nCodes)
+            codes <- initf(data, xdim, ydim)
             message("Initialization ready\n")
         } else {
-            starters <- sample(1:nrow(data), nCodes, replace = FALSE)        
+            codes <- data[sample(1:nrow(data), nCodes, replace = FALSE), , 
+                          drop = FALSE]
         }
-        codes <- data[starters, , drop = FALSE]
     }
     
     # Initialize the neighbourhood
@@ -183,11 +212,19 @@ MapDataToCodes <- function (codes, newdata, distf=2) {
 
 #' Select k well spread points from X
 #' @param   X matrix in which each row represents a point
-#' @param   k number of points to choose
+#' @param   xdim x dimension of the grid
+#' @param   ydim y dimension of the grid
 #'
-#' @return  array containing indices of selected rows
+#' @return  array containing the selected selected rows
 #' 
-Initialize <- function(X, k){
+#' @examples 
+#' 
+#' points <- matrix(1:1000, ncol = 10)
+#' selection <- Initialize_KWSP(points, 3, 3)
+#' 
+#' @export
+Initialize_KWSP <- function(X, xdim, ydim){
+    k <- xdim * ydim
 
     # Start with a random point
     selected <- numeric(k)
@@ -202,7 +239,37 @@ Initialize <- function(X, k){
                     apply(X, 1, function(x)sum((x-X[selected[i], ])^2)))
     }
     
-    selected
+    X[selected,]
+}
+
+#' Create a grid from first 2 PCA components
+#' @param   data matrix in which each row represents a point
+#' @param   xdim x dimension of the grid
+#' @param   ydim y dimension of the grid
+#'
+#' @return  array containing the selected selected rows
+#' 
+#' @examples 
+#' 
+#' points <- matrix(1:1000, ncol = 10)
+#' selection <- Initialize_PCA(points, 3, 3)
+#' 
+#' @export
+Initialize_PCA <- function(data, xdim, ydim){
+    pca <- stats::prcomp(data, rank.=2, retx=F)
+    # scale out to 5-times standard deviation, 
+    # which should cover the data nicely
+    sdev_scale <- 5 
+    ax1 <- t(matrix(pca$rotation[,1] * sdev_scale * pca$sdev,
+             nrow=ncol(data),
+             ncol=xdim * ydim)) *
+             (2 * rep(c(1:xdim) - 1, times=ydim) / (xdim - 1) - 1)
+    ax2 <- t(matrix(pca$rotation[,2] * sdev_scale * pca$sdev,
+             nrow=ncol(data),
+             ncol=xdim * ydim)) *
+             (2 * rep(c(1:ydim) - 1, each=xdim) / (ydim - 1) - 1)
+
+    t(matrix(pca$center, nrow=ncol(data), ncol=xdim * ydim)) + ax1 + ax2
 }
 
 #' Calculate mean weighted cluster purity
@@ -258,18 +325,14 @@ Dist.MST <- function(X){
 #' @param  groups   List containing an array with file names for each group
 #' @param  plot     Logical. If TRUE, make a starplot of each individual file
 #' @param  silent   Logical. If TRUE, print progress messages
-#' @param  ...      Extra arguments to be passed on to the PlotStars function
 #'
 #' @return Distance matrix
-#' 
-#' @seealso \code{\link{PlotStars}},\code{\link{PlotGroups}}
 #'
 #' @examples
-#'    library(FlowSOM)
 #'    set.seed(1)
 #'    
 #'    # Build the FlowSOM tree on the example file
-#'    fileName <- system.file("extdata","lymphocytes.fcs",package="FlowSOM")
+#'    fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 #'    flowSOM.res <- FlowSOM(fileName, compensate=TRUE,transform=TRUE,
 #'                     scale=TRUE,colsToUse=c(9,12,14:18),nClus = 10)
 #'    
@@ -304,50 +367,53 @@ Dist.MST <- function(X){
 #'    PlotGroups(flowSOM.res[[1]], groupRes)
 #'
 #' @export 
-CountGroups <- function(fsom,groups,plot=TRUE,silent=FALSE,...){
-    if(class(groups[[1]]) == "character"){
-        files <- unlist(groups)
-        counts <- matrix(0,nrow=length(files),ncol=fsom$map$nNodes,
-                        dimnames = list(files, as.character(1:fsom$map$nNodes)))
-        for(file in files){
-            if(!silent){print(file)}
-            ff <- flowCore::read.FCS(file)
-            fsom_f <- NewData(fsom,ff)
-            if(plot){PlotStars(fsom_f,main=file,...)}
-            tmp <- table(fsom_f$map$mapping[,1])
-            counts[file,names(tmp)] <- tmp
-        }
-    } else {
-        stop("The CountGroups function can currently only read from files.
-              groups should be given as a list of character arrays.")
+CountGroups <- function (fsom, groups, plot = TRUE, silent = FALSE) 
+{
+  if (class(groups[[1]]) == "character") {
+    files <- unlist(groups)
+    counts <- matrix(0, nrow = length(files), ncol = fsom$map$nNodes, 
+                     dimnames = list(files, as.character(1:fsom$map$nNodes)))
+    for (file in files) {
+      if (!silent) {
+        print(file)
+      }
+      ff <- flowCore::read.FCS(file)
+      fsom_f <- NewData(fsom, ff)
+      if (plot) {
+        PlotStars(fsom_f, main = file)
+      }
+      tmp <- table(fsom_f$map$mapping[, 1])
+      counts[file, names(tmp)] <- tmp
     }
-    
-    pctgs <- t(sapply(seq_len(nrow(counts)),
-                    function(i){counts[i,]/ rowSums(counts)[i]}))
-    rownames(pctgs) <- rownames(counts)
-    
-    means <- apply(pctgs,2,function(x){
-        tapply(x,
-                INDEX = factor(rep(names(groups),lapply(groups,length)),
-                                levels = names(groups)),
-                mean)})
-    means <- means+1e-20
-    medians <- apply(pctgs,2,function(x){
-        tapply(x,
-                INDEX = factor(rep(names(groups),lapply(groups,length)),
-                                levels = names(groups)),
-                stats::median)})
-    medians <- medians+1e-20
-    
-    means_norm <- list()
-    for(group in names(groups)){
-        means_norm[[group]] <- (means[group,] - min(means)) / 
-            (max(means) - min(means))    
-    }
-    
-    list("groups"=rep(names(groups),unlist(lapply(groups,length))),
-        "counts"=counts, "pctgs"=pctgs, "means"=means,
-        "medians"=medians, "means_norm"=means_norm)
+    nGroups <- lapply(groups, 
+                      length)
+  }
+  else {
+    counts <- do.call(rbind, groups)
+    nGroups <- lapply(groups, 
+                      nrow)
+  }
+  pctgs <- t(sapply(seq_len(nrow(counts)), function(i) {
+    counts[i, ]/rowSums(counts)[i]
+  }))
+  means <- apply(pctgs, 2, function(x) {
+    tapply(x, INDEX = factor(rep(names(groups), nGroups), 
+                             levels = names(groups)), mean)
+  })
+  means <- means + 0.00000000000000000001
+  medians <- apply(pctgs, 2, function(x) {
+    tapply(x, INDEX = factor(rep(names(groups), nGroups), 
+                             levels = names(groups)), stats::median)
+  })
+  medians <- medians + 0.00000000000000000001
+  means_norm <- list()
+  for (group in names(groups)) {
+    means_norm[[group]] <- (means[group, ] - min(means))/(max(means) - 
+                                                            min(means))
+  }
+  list(groups = rep(names(groups), unlist(nGroups)), 
+       counts = counts, pctgs = pctgs, means = means, medians = medians, 
+       means_norm = means_norm)
 }
 
 
@@ -396,6 +462,130 @@ SaveClustersToFCS <- function(fsom, original_files,
                                                 "_FlowSOM.fcs",
                                                 original_files[i]))        
     }
+}
+
+#' Get cluster label for all individual cells
+#'
+#' @param  fsom             FlowSOM object as generated by the FlowSOM function
+#'                          or the BuildSOM function
+#'                          
+#' @return vector label for every cell
+#' @examples 
+#' fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
+#' flowSOM.res <- FlowSOM(fileName, compensate=TRUE,transform=TRUE,
+#'                       scale=TRUE,colsToUse=c(9,12,14:18),nClus=10)
+#' cluster_labels <- GetClusters(flowSOM.res)
+#' cluster_labels <- GetClusters(flowSOM.res$FlowSOM)
+#'
+#' @export 
+GetClusters <- function(fsom) {
+  if (class(fsom) == "list" & !is.null(fsom$FlowSOM)) {
+    fsom <- fsom$FlowSOM
+  }
+  if (class(fsom) != "FlowSOM") {
+    stop("fsom should be a FlowSOM object.")
+  }
+  return(fsom$map$mapping[,1])
+}
+
+#' Get metacluster label for all individual cells
+#'
+#' @param  fsom             FlowSOM object as generated by the FlowSOM function
+#'                          or the BuildSOM function
+#' @param  meta             Metacluster label for each FlowSOM cluster. If this
+#'                          is NULL, the fsom argument should be as generated by
+#'                          the FlowSOM function, and fsom$metaclustering will
+#'                          be used.                          
+#' @return vector label for every cell
+#' @examples 
+#' fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
+#' flowSOM.res <- FlowSOM(fileName, compensate=TRUE,transform=TRUE,
+#'                       scale=TRUE,colsToUse=c(9,12,14:18),nClus=10)
+#' metacluster_labels <- GetMetaclusters(flowSOM.res)
+#' metacluster_labels <- GetMetaclusters(flowSOM.res$FlowSOM,
+#'                                       meta = flowSOM.res$metaclustering)
+#'
+#' @export 
+GetMetaclusters <- function(fsom, meta = NULL){
+  
+  if (class(fsom) == "list" & !is.null(fsom$FlowSOM)) {
+    if (is.null(meta) & !is.null(fsom$metaclustering)) {
+        meta <- fsom$metaclustering
+    }
+    fsom <- fsom$FlowSOM 
+  }
+  if (class(fsom) != "FlowSOM"){
+    stop("fsom should be a FlowSOM object.")
+  } 
+  if(is.null(meta)){
+    stop("No metaclustering found.")
+  }
+  
+  return(meta[fsom$map$mapping[,1]])
+} 
+
+#' Get MFI values for all clusters
+#'
+#' @param  fsom             FlowSOM object as generated by the FlowSOM function
+#'                          or the BuildSOM function
+#' @param  colsUsed         logical. Should report only the columns used to 
+#'                          build the SOM. Default = FALSE.
+#' @param  prettyColnames   logical. Should report pretty column names instead
+#'                          of standard column names. Default = FALSE.
+#'                          
+#' @return Matrix with median values for each marker
+#'
+#' @examples 
+#' fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
+#' flowSOM.res <- FlowSOM(fileName, compensate=TRUE,transform=TRUE,
+#'                       scale=TRUE,colsToUse=c(9,12,14:18),nClus=10)
+#' mfis <- GetMFIs(flowSOM.res)
+#' mfis <- GetMFIs(flowSOM.res$FlowSOM)
+#' @export 
+GetMFIs <- function(fsom, colsUsed = FALSE, prettyColnames = FALSE){
+  if (class(fsom) == "list" & !is.null(fsom$FlowSOM)) {
+    fsom <- fsom$FlowSOM 
+  }
+  if (class(fsom) != "FlowSOM") {
+    stop("fsom should be a FlowSOM object.")
+  }
+  MFIs <- fsom$map$medianValues
+  rownames(MFIs) <- seq_len(nrow(MFIs))
+  if(is.null(fsom$map$colsUsed)) colsUsed <- FALSE
+  if(is.null(fsom$prettyColnames)) prettyColnames <- FALSE
+  if(colsUsed && !prettyColnames){
+    MFIs <- MFIs[, fsom$map$colsUsed]
+  } else if(!colsUsed && prettyColnames) {
+    colnames(MFIs) <- fsom$prettyColnames
+  } else if(colsUsed && prettyColnames) {
+    MFIs <- MFIs[, fsom$map$colsUsed]
+    colnames(MFIs) <- fsom$prettyColnames[fsom$map$colsUsed]
+  }
+  return(MFIs)
+}
+
+#' Get CV values for all clusters
+#'
+#' @param  fsom             FlowSOM object as generated by the FlowSOM function
+#'                          or the BuildSOM function
+#'                          
+#' @return Matrix with coefficient of variation values for each marker
+#' 
+#' fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
+#' flowSOM.res <- FlowSOM(fileName, compensate=TRUE,transform=TRUE,
+#'                       scale=TRUE,colsToUse=c(9,12,14:18),nClus=10)
+#' cvs <- GetCVs(flowSOM.res)
+#' cvs <- GetCVs(flowSOM.res$FlowSOM)
+#'
+#' @export
+GetCVs <- function(fsom){
+  if (class(fsom) == "list" & !is.null(fsom$FlowSOM)) {
+    fsom <- fsom$FlowSOM 
+  }
+  if (class(fsom) != "FlowSOM") {
+    stop("fsom should be a FlowSOM object.")
+  }
+  return(fsom$map$cvValues)
 }
 
 # #' Find peaks and valleys in one-dimensional data
