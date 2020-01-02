@@ -26,12 +26,19 @@ BuildMST <- function(fsom, silent=FALSE, tSNE=FALSE){
     fsom$MST <- list()
     if(!silent) message("Building MST\n")
     
-    adjacency <- stats::dist(fsom$map$codes, method = "euclidean")
-    fullGraph <- igraph::graph.adjacency(as.matrix(adjacency), 
-                                mode = "undirected", 
-                                weighted = TRUE)
+    adjacency <- as.matrix(stats::dist(fsom$map$codes, method = "euclidean"))
+    fullGraph <- igraph::graph.adjacency(adjacency,
+                                         mode = "undirected",
+                                         weighted = TRUE)
     fsom$MST$graph <- igraph::minimum.spanning.tree(fullGraph)
-    fsom$MST$l <- igraph::layout.kamada.kawai(fsom$MST$graph)    
+    ws <- igraph::edge.attributes(fsom$MST$graph)$weight
+    #normalize edge weights to match the grid size in coords (see below)
+    ws <- ws / mean(ws)
+    igraph::edge.attributes(fsom$MST$graph)$weight <- ws
+    fsom$MST$l <- igraph::layout.kamada.kawai(
+      coords=as.matrix(fsom$map$grid),
+      fsom$MST$graph)
+
     
     if(tSNE){
         fsom$MST$l2 <- tsne(fsom$map$codes)   
@@ -87,7 +94,10 @@ UpdateNodeSize <- function(fsom, count = NULL, reset=FALSE, transform=sqrt,
     if(reset){
         fsom$MST$size <- rep(maxNodeSize, nrow(fsom$map$grid))
     } else {
-        t <- table(fsom$map$mapping[, 1])
+        t <- rep(0, fsom$map$nNodes)
+        names(t) <- as.character(seq_len(fsom$map$nNodes))
+        t_tmp <- table(fsom$map$mapping[, 1]) / nrow(fsom$map$mapping)
+        t[names(t_tmp)] <- t_tmp
         
         if(!is.null(count)){
             t <- (t/sum(t)) * count
@@ -100,9 +110,8 @@ UpdateNodeSize <- function(fsom, count = NULL, reset=FALSE, transform=sqrt,
         if(is.null(shift)) shift <- min(t)
         if(is.null(scale)) scale <- max(t - shift)
         rescaled <- maxNodeSize * (t - shift)/scale
-        
-        fsom$MST$size <- numeric(nrow(fsom$map$grid))
-        fsom$MST$size[as.numeric(names(t))] <- rescaled   
+        rescaled[rescaled == 0] <- 0.0001
+        fsom$MST$size <- rescaled   
     }
     fsom
 }
@@ -1099,6 +1108,10 @@ plotStarQuery <- function(labels,values,
 #' @param legend   Logical, if TRUE add a legend
 #' @param query    Show a low/high profile for certain markers in the legend.
 #'                 See also \code{\link{QueryStarPlot}}
+#' @param range    If "all" (default), range is computed on all markers passed,
+#'                 if "one", range is computed on every marker separately. The
+#'                 height of the pie pieces will be computed relative to this 
+#'                 range.
 #' @param main     Title of the plot
 #' 
 #' @return Nothing is returned. A plot is drawn in which each node is 
@@ -1136,16 +1149,27 @@ PlotStars <- function(fsom,
                       thresholds=NULL,
                       legend=TRUE,
                       query=NULL,
+                      range = "all",
                       main=""){
     # Add star chart option to iGraph
     add.vertex.shape("star", clip=igraph.shape.noclip, plot=mystar, 
                     parameters=list(vertex.data=NULL,vertex.cP = colorPalette,
-                                    vertex.scale=TRUE, vertex.bg = starBg))
+                                    vertex.scale=FALSE, vertex.bg = starBg))
     
-    if(is.null(thresholds)){
+    if (is.null(thresholds)) {
         # Use MFIs
-        data <- fsom$map$medianValues[, markers,drop=FALSE]
-        scale <- TRUE
+        data <- fsom$map$medianValues[, markers, drop=FALSE]
+        if (range == "all") {
+          min_data <- min(data, na.rm = TRUE)
+          max_data <- max(data, na.rm = TRUE)
+          data <- (data - min_data) / (max_data - min_data)
+        } else if (range == "one"){
+          data <- apply(data, 2, function(x){
+            min_x <- min(x, na.rm = TRUE)
+            max_x <- max(x, na.rm = TRUE)
+            (x - min_x)/ (max_x - min_x) 
+          })
+        }
     } else {
         # scale thresholds same as data
         if(fsom$transform){
@@ -1170,7 +1194,6 @@ PlotStars <- function(fsom,
                 }
                 res
             }))
-        scale <- FALSE
     }
     
     # Choose layout type
@@ -1235,7 +1258,7 @@ PlotStars <- function(fsom,
                         vertex.size = fsom$MST$size, 
                         vertex.data = data,
                         vertex.cP = colorPalette(ncol(data)),
-                        vertex.scale = scale,
+                        vertex.scale = FALSE,
                         layout = layout, 
                         edge.lty = lty,  
                         mark.groups = background$groups, 
@@ -1665,8 +1688,9 @@ PlotOverview2D <- function(fsom,
   graphics::layout(matrix(seq_len(length(markerlist) * length(metaclusters)), 
                 nrow = length(metaclusters)))
   if(is.null(colors)){
-    colors <- RColorBrewer::brewer.pal(length(metaclusters),
+    colors <- RColorBrewer::brewer.pal(12,
                                        "Paired")
+    colors <- rep(colors, length.out = length(metaclusters))
     names(colors) <- as.character(metaclusters)
   }
   
@@ -1777,7 +1801,7 @@ FlowSOMSubset <- function(fsom,ids){
     fsom_tmp$data <- fsom$data[ids,]
     fsom_tmp$map$mapping <- fsom$map$mapping[ids,]
     fsom_tmp <- UpdateDerivedValues(fsom_tmp)
-    UpdateNodeSize(fsom_tmp)
+    fsom_tmp <- UpdateNodeSize(fsom_tmp)
     return(fsom_tmp)
 }
 
@@ -2171,7 +2195,8 @@ PlotGroups <- function(fsom, groups,
     fsom$MST$size <- fsom$MST$size * groups$means_norm[[group]]
     PlotStars(fsom, backgroundValues = annotation[[group]],
               main = group,
-              backgroundColor = backgroundColors)
+              backgroundColor = backgroundColors,
+              ...)
   }
   
   annotation

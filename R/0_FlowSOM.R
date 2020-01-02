@@ -104,46 +104,46 @@ FlowSOM <- function(input, pattern=".fcs", compensate=FALSE, spillover=NULL,
                     scaled.center=TRUE, scaled.scale=TRUE, silent=TRUE, 
                     colsToUse, nClus=NULL, maxMeta, importance=NULL, 
                     seed = NULL, ...){
-    # Method to run general FlowSOM workflow. 
-    # Will scale the data and uses consensus meta-clustering by default.
-    #
-    # Args:
-    #    input: dirName, fileName, array of fileNames, flowFrame or 
-    #           array of flowFrames
-    #    colsToUse: column names or indices to use for building the SOM
-    #    maxMeta: maximum number of clusters for meta-clustering
-    #
-    # Returns:
-    #    list with the FlowSOM object and an array with final clusterlabels
-    if(!is.null(seed)){
-        set.seed(seed)
-    }
-    
-    t <- system.time(fsom <- ReadInput(input, pattern=pattern, 
-                                        compensate=compensate, 
-                                        spillover=spillover, 
-                                        transform=transform, 
-                                        toTransform=toTransform, 
-                                        transformFunction = transformFunction, 
-                                        scale=scale,
-                                        scaled.center=scaled.center, 
-                                        scaled.scale=scaled.scale, 
-                                        silent=silent))
-    if(!silent) message(t[3],"\n")
-    t <- system.time(fsom <- BuildSOM(fsom, colsToUse, silent=silent, 
-                                        importance=importance, ...))
-    if(!silent) message(t[3],"\n")
-    t <- system.time(fsom <- BuildMST(fsom, silent=silent))
-    if(!silent) message(t[3],"\n")
-    if(is.null(nClus)){
-        t <- system.time(cl <- as.factor(MetaClustering(fsom$map$codes,
-                                        "metaClustering_consensus", maxMeta)))
-    } else {
-        t <- system.time(cl <- as.factor(
-            metaClustering_consensus(fsom$map$codes, nClus,seed = seed)))
-    }
-    if(!silent) message(t[3],"\n")
-    list("FlowSOM"=fsom, "metaclustering"=cl)
+  # Method to run general FlowSOM workflow. 
+  # Will scale the data and uses consensus meta-clustering by default.
+  #
+  # Args:
+  #    input: dirName, fileName, array of fileNames, flowFrame or 
+  #           array of flowFrames
+  #    colsToUse: column names or indices to use for building the SOM
+  #    maxMeta: maximum number of clusters for meta-clustering
+  #
+  # Returns:
+  #    list with the FlowSOM object and an array with final clusterlabels
+  if(!is.null(seed)){
+    set.seed(seed)
+  }
+  
+  t <- system.time(fsom <- ReadInput(input, pattern=pattern, 
+                                     compensate=compensate, 
+                                     spillover=spillover, 
+                                     transform=transform, 
+                                     toTransform=toTransform, 
+                                     transformFunction = transformFunction, 
+                                     scale=scale,
+                                     scaled.center=scaled.center, 
+                                     scaled.scale=scaled.scale, 
+                                     silent=silent))
+  if(!silent) message(t[3],"\n")
+  t <- system.time(fsom <- BuildSOM(fsom, colsToUse, silent=silent, 
+                                    importance=importance, ...))
+  if(!silent) message(t[3],"\n")
+  t <- system.time(fsom <- BuildMST(fsom, silent=silent))
+  if(!silent) message(t[3],"\n")
+  if(is.null(nClus)){
+    t <- system.time(cl <- as.factor(MetaClustering(fsom$map$codes,
+                                                    "metaClustering_consensus", maxMeta)))
+  } else {
+    t <- system.time(cl <- as.factor(
+      metaClustering_consensus(fsom$map$codes, nClus,seed = seed)))
+  }
+  if(!silent) message(t[3],"\n")
+  list("FlowSOM"=fsom, "metaclustering"=cl)
 }
 
 #' Aggregate multiple fcs files together
@@ -181,72 +181,72 @@ FlowSOM <- function(input, pattern=".fcs", compensate=FALSE, spillover=NULL,
 #' 
 #' @export
 AggregateFlowFrames <- function(fileNames, cTotal,
-                            writeOutput = FALSE, outputFile  = "aggregate.fcs", 
-                            writeMeta = FALSE, keepOrder = FALSE, 
-                            verbose = FALSE){
-    
-    nFiles <- length(fileNames)
-    cFile <- ceiling(cTotal/nFiles)
-    
-    flowFrame <- NULL
-    
-    for(i in seq_len(nFiles)){
-        if(verbose) {message("Reading ", fileNames[i])}
-        f <- flowCore::read.FCS(fileNames[i])
-        c <- sample(seq_len(nrow(f)),min(nrow(f),cFile))
-        if(keepOrder) c <- sort(c)
-        if(writeMeta){
-            #<path_to_outputfile>/<filename>_selected_<outputfile>.txt
-            utils::write.table(c, 
-                               paste(gsub("[^/]*$", "", outputFile),
-                                     gsub("\\.[^.]*$", "", 
-                                          gsub(".*/", "", fileNames[i])),
-                                     "_selected_",
-                                     gsub("\\.[^.]*$", "", 
-                                          gsub(".*/", "", outputFile)),
-                                     ".txt", sep=""))
-        }
-        m <- matrix(rep(i,min(nrow(f),cFile)))
-        m2 <- m + stats::rnorm(length(m),0,0.1)
-        m <- cbind(m,m2)
-        colnames(m) <- c("File","File_scattered")
-        prev_agg <- length(grep("File[0-9]*$", colnames(f)))
-        if(prev_agg > 0){
-          colnames(m) <- paste0(colnames(m), prev_agg+1)
-        }
-        f <- flowCore::cbind2(f[c,],m)
-        if(is.null(flowFrame)){
-            flowFrame <- f
-            flowFrame@description$`$FIL` <- gsub(".*/","",outputFile)
-            flowFrame@description$`FILENAME` <- gsub(".*/","",outputFile)
-        }
-        else {
-            flowCore::exprs(flowFrame) <- 
-              rbind(flowCore::exprs(flowFrame), 
-                    flowCore::exprs(f)[,
-                              flowCore::colnames(flowCore::exprs(flowFrame))])
-        }
+                                writeOutput = FALSE, outputFile  = "aggregate.fcs", 
+                                writeMeta = FALSE, keepOrder = FALSE, 
+                                verbose = FALSE){
+  
+  nFiles <- length(fileNames)
+  cFile <- ceiling(cTotal/nFiles)
+  
+  flowFrame <- NULL
+  
+  for(i in seq_len(nFiles)){
+    if(verbose) {message("Reading ", fileNames[i])}
+    f <- flowCore::read.FCS(fileNames[i])
+    c <- sample(seq_len(nrow(f)),min(nrow(f),cFile))
+    if(keepOrder) c <- sort(c)
+    if(writeMeta){
+      #<path_to_outputfile>/<filename>_selected_<outputfile>.txt
+      utils::write.table(c, 
+                         paste(gsub("[^/]*$", "", outputFile),
+                               gsub("\\.[^.]*$", "", 
+                                    gsub(".*/", "", fileNames[i])),
+                               "_selected_",
+                               gsub("\\.[^.]*$", "", 
+                                    gsub(".*/", "", outputFile)),
+                               ".txt", sep=""))
     }
-    
-    flowFrame@description[[
-        paste("flowCore_$P",ncol(flowFrame)-1,"Rmin",sep="")]] <- 0
-    flowFrame@description[[
-        paste("flowCore_$P",ncol(flowFrame)-1,"Rmax",sep="")]] <- nFiles+1
-    flowFrame@description[[
-        paste("flowCore_$P",ncol(flowFrame),"Rmin",sep="")]] <- 0
-    flowFrame@description[[
-        paste("flowCore_$P",ncol(flowFrame),"Rmax",sep="")]] <- nFiles+1  
-    flowFrame@description[[paste("$P", ncol(flowFrame) - 1, 
-                                 "B", sep = "")]] <- 32
-    flowFrame@description[[paste("$P", ncol(flowFrame), 
-                                 "B", sep = "")]] <- 32
-    
-    flowFrame@description$FIL <- gsub(".*/","",outputFile)
-    if(writeOutput){
-        flowCore::write.FCS(flowFrame,filename=outputFile)
+    m <- matrix(rep(i,min(nrow(f),cFile)))
+    m2 <- m + stats::rnorm(length(m),0,0.1)
+    m <- cbind(m,m2)
+    colnames(m) <- c("File","File_scattered")
+    prev_agg <- length(grep("File[0-9]*$", colnames(f)))
+    if(prev_agg > 0){
+      colnames(m) <- paste0(colnames(m), prev_agg+1)
     }
-    
-    flowFrame
+    f <- flowCore::cbind2(f[c,],m)
+    if(is.null(flowFrame)){
+      flowFrame <- f
+      flowFrame@description$`$FIL` <- gsub(".*/","",outputFile)
+      flowFrame@description$`FILENAME` <- gsub(".*/","",outputFile)
+    }
+    else {
+      flowCore::exprs(flowFrame) <- 
+        rbind(flowCore::exprs(flowFrame), 
+              flowCore::exprs(f)[,
+                                 flowCore::colnames(flowCore::exprs(flowFrame))])
+    }
+  }
+  
+  flowFrame@description[[
+    paste("flowCore_$P",ncol(flowFrame)-1,"Rmin",sep="")]] <- 0
+  flowFrame@description[[
+    paste("flowCore_$P",ncol(flowFrame)-1,"Rmax",sep="")]] <- nFiles+1
+  flowFrame@description[[
+    paste("flowCore_$P",ncol(flowFrame),"Rmin",sep="")]] <- 0
+  flowFrame@description[[
+    paste("flowCore_$P",ncol(flowFrame),"Rmax",sep="")]] <- nFiles+1  
+  flowFrame@description[[paste("$P", ncol(flowFrame) - 1, 
+                               "B", sep = "")]] <- 32
+  flowFrame@description[[paste("$P", ncol(flowFrame), 
+                               "B", sep = "")]] <- 32
+  
+  flowFrame@description$FIL <- gsub(".*/","",outputFile)
+  if(writeOutput){
+    flowCore::write.FCS(flowFrame,filename=outputFile)
+  }
+  
+  flowFrame
 }
 
 
@@ -394,15 +394,15 @@ GetFlowJoLabels <- function(files,
   gates <- CytoML::flowjo_to_gatingset(ws,name = 1)
   
   
-  files_in_wsp <- gates@data@origSampleVector
-  counts <- as.numeric(gsub(".*_([0-9]*)$", "\\1", files_in_wsp))
+  files_in_wsp <- CytoML::fj_ws_get_samples(ws)$name
+  counts <- CytoML::fj_ws_get_samples(ws)$count
   result <- list()
   for(file in files){
     print(paste0("Processing ", file))
     file_id <- grep(gsub(".*/", "", file), 
                     files_in_wsp)
-    if(length(file_id) == 0) {stop("File not found. Files available: ",
-                                   gsub("_[0-9]*$", "\n", files_in_wsp))}
+    if(length(file_id) == 0) {stop("File not found. Files available: \n",
+                                   paste0(files_in_wsp, "\n"))}
     gate_names <- flowWorkspace::gs_get_pop_paths(gates, path = "auto")
     
     gatingMatrix <- matrix(NA,
@@ -432,8 +432,6 @@ GetFlowJoLabels <- function(files,
   if (length(files) == 1){
     result <- result[[1]]
   }
-  
-  CytoML::flowjo_ws_close(ws)
   
   return(result)
 }
