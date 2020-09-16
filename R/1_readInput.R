@@ -154,15 +154,17 @@ AddFlowFrame <- function(fsom, flowFrame){
     # Compensation
     if(fsom$compensate){
         if(is.null(fsom$spillover)){
-            if(!is.null(flowFrame@description$SPILL)){
-                spillover <- flowFrame@description$SPILL    
-            } else if (!is.null(flowFrame@description$`$SPILLOVER`)){
-                if(is(flowFrame@description$`$SPILLOVER`, "matrix")){
-                    spillover <- flowFrame@description$`$SPILLOVER`
+            if(!is.null(flowCore::keyword(flowFrame, "SPILL")[[1]])){
+                spillover <- flowCore::keyword(flowFrame, "SPILL")[[1]]
+            } else if (!is.null(
+                flowCore::keyword(flowFrame, "$SPILLOVER")[[1]])){
+                if(is(flowCore::keyword(flowFrame, "$SPILLOVER")[[1]], 
+                      "matrix")){
+                    spillover <- flowCore::keyword(flowFrame, "$SPILLOVER")[[1]]
                     flowFrame@description$SPILL <- spillover
                 } else {
                     spilloverStr <- strsplit(
-                        flowFrame@description$`$SPILLOVER`,
+                      flowCore::keyword(flowFrame, "$SPILLOVER")[[1]],
                         ",")[[1]]
                     n <- as.numeric(spilloverStr[1])
                     spillover <- t(matrix(as.numeric(spilloverStr[(n+2):
@@ -182,7 +184,7 @@ AddFlowFrame <- function(fsom, flowFrame){
     # Transform
     if(fsom$transform){
         if(is.null(fsom$toTransform)){ 
-            fsom$toTransform <- colnames(flowFrame@description$SPILL)
+            fsom$toTransform <- colnames(flowCore::keyword(flowFrame, "SPILL")[[1]])
         } else{ 
             fsom$toTransform <- colnames(flowCore::exprs(flowFrame)[,
                                                             fsom$toTransform])
@@ -194,8 +196,8 @@ AddFlowFrame <- function(fsom, flowFrame){
     
     # Save pretty names for nicer visualisation later on
     if(is.null(fsom$prettyColnames)){
-        n <- flowFrame@parameters@data[, "name"]
-        d <- flowFrame@parameters@data[, "desc"]
+        n <- flowCore::parameters(flowFrame)@data[, "name"]
+        d <- flowCore::parameters(flowFrame)@data[, "desc"]
         d[is.na(d)] <- n[is.na(d)]
         if(any(grepl("#",d))){
             # Support for hashtag notation: 
@@ -210,8 +212,8 @@ AddFlowFrame <- function(fsom, flowFrame){
     # Add the data to the matrix
     f <- flowCore::exprs(flowFrame)
     attr(f, "ranges") <- NULL
-    name <- flowFrame@description$FIL
-    if(is.null(name)) name <- flowFrame@description$`$FIL`
+    name <-flowCore::keyword(flowFrame, "FIL")[[1]]
+    if(is.null(name)) name <- flowCore::keyword(flowFrame, "$FIL")[[1]]
     if(is.null(name)) name <- length(fsom$metaData)+1
     if(is.null(fsom$data)){ 
         fsom$data <- f 
