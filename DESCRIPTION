@@ -1,31 +1,52 @@
 Package: FlowSOM
-Version: 1.99.0
-Date: 2019-12-04
+Version: 1.99.1
+Date: 2021-01-22
 Title: Using self-organizing maps for visualization and interpretation
     of cytometry data
 Authors@R: c(person("Sofie", "Van Gassen", role = c("aut", "cre"),
             email = "sofie.vangassen@ugent.be"),
+            person("Artuur", "Couckuyt", role = c("aut"),
+            email = "artuur.couckuyt@ugent.be"),
+            person("Katrien", "Quintelier", role = c("aut"),
+            email = "katrienL.Quintelier@ugent.be"),
+            person("Annelies", "Emmaneel", role = c("aut"),
+            email = "annelies.emmaneel@ugent.be"),
             person("Britt","Callebaut",role="aut",
             email="britt.callebaut@ugent.be"),
-            person("Yvan", "Saeys", role = "aut", email="yvan.saeys@ugent.be"))
-Author: Sofie Van Gassen, Britt Callebaut and Yvan Saeys
-Maintainer: Sofie Van Gassen <sofie.vangassen@ugent.be>
+            person("Yvan", "Saeys", role = "aut", 
+            email="yvan.saeys@ugent.be"))
 Depends:
-    R (>= 3.2),
+    R (>= 4.0),
     igraph
 Imports:
     stats,
     utils,
-    flowCore,
-    ConsensusClusterPlus,
     BiocGenerics,
-    tsne,
+    colorRamps,
+    ConsensusClusterPlus,
     CytoML,
+    dplyr,
+    flowCore,
     flowWorkspace,
+    ggforce,
+    ggnewscale,
+    ggplot2,
+    ggpointdensity,
+    ggpubr,
+    ggrepel,
+    grDevices,
+    magrittr,
+    methods,
+    pheatmap,
+    RColorBrewer,
+    rlang,
+    Rtsne,
+    tidyr,
     XML,
-    RColorBrewer
+    scattermore
 Suggests:
-    BiocStyle
+    BiocStyle,
+    testthat
 Description: FlowSOM offers visualization options for cytometry data,
     by using Self-Organizing Map clustering and Minimal Spanning Trees.
 License: GPL (>= 2)
