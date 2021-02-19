@@ -411,6 +411,8 @@ PlotLabels <- function(fsom,
 #' Plot FlowSOM grid or tree, with in each node the cluster id.
 #'
 #' @param fsom        FlowSOM object
+#' @param numbers     Character string, should be either "Clusters" or 
+#'                    "Metaclusters"
 #' @param maxNodeSize Determines the maximum nodesize. Default is 0. 
 #'                    See \code{\link{PlotFlowSOM}} for more options.
 #' @param ...         Additional arguments to pass to \code{\link{PlotFlowSOM}}
@@ -438,7 +440,7 @@ PlotLabels <- function(fsom,
 #' 
 #' # Plot the node IDs
 #' PlotNumbers(flowSOM.res)
-#' 
+#' PlotNumbers(flowSOM.res, "Metaclusters")
 #' 
 #' PlotNumbers(flowSOM.res,
 #'             view = "grid")
@@ -449,10 +451,18 @@ PlotLabels <- function(fsom,
 #' 
 #' @export
 PlotNumbers <- function(fsom,
+                        numbers = "Clusters",
                         maxNodeSize = 0,
                         ...){
+  if (numbers == "Clusters"){
+    numbers <- seq_len(NClusters(fsom))
+  } else if (numbers == "Metaclusters") {
+    numbers <- fsom$metaclustering
+  } else {
+    stop("Numbers should be 'Clusters' or 'Metaclusters'")
+  }
   p <- PlotLabels(fsom =  fsom,
-                  labels = seq_len(NClusters(fsom)), 
+                  labels = numbers, 
                   maxNodeSize = maxNodeSize,
                   ...)
   return(p)
@@ -699,6 +709,8 @@ PlotDimRed <- function(fsom,
     downsample <- sample(seq_len(nrow(dimred_data)), cTotal)
     dimred_data <- dimred_data[downsample, , drop = FALSE]
     dimred_col <- dimred_col[downsample, , drop = FALSE]
+  } else {
+    downsample <- seq_len(nrow(dimred_data))
   }
   if (is.function(dimred)){
     dimred_res <- dimred(dimred_data, ...)
@@ -1849,9 +1861,9 @@ PlotManualBars <- function(fsom, fcs,
                 ") should have the same length as the number of unique labels",
                 "in manualVector (", length(unique(manualVector)), ")."))
   } 
-  if (!is.null(colors) & !length(colors) == length(unique(manualVector))){
+  if (!is.null(colors) & !length(colors) >= length(unique(manualVector))){
     stop(paste0("Length of the colors vector (", length(colors),") should have",
-                "the same length as the number of unique labels in ",
+                "at least the same length as the number of unique labels in ",
                 "manualVector (", length(unique(manualVector)), ")."))
   } 
   
@@ -1861,8 +1873,7 @@ PlotManualBars <- function(fsom, fcs,
                      ncol = fsom$map$nNodes,
                      dimnames = 
                        list("fcs",
-                            paste0("C", 
-                                   as.character(seq_len(fsom$map$nNodes)))))
+                            paste0("C", seq_len(fsom$map$nNodes))))
   fsom_tmp <- NewData(fsom, fcs)
   C_counts["fcs", ] <- table(GetClusters(fsom_tmp))
   C_perc <- 100 * prop.table(C_counts, margin = 1)
@@ -1886,11 +1897,10 @@ PlotManualBars <- function(fsom, fcs,
   df_s <- data.frame(table(df[, 1:2]))
   p1 <- ggplot2::ggplot(data = 
                           transform(df_s,
-                                    MC = factor(.data$MC,
-                                                levels = as.character(
-                                                  seq_len(NMetaclusters(
-                                                    fsom)))),
-                                    Manual = factor(.data$Manual,
+                                    MC = factor(df_s$MC,
+                                                levels = seq_len(NMetaclusters(
+                                                    fsom))),
+                                    Manual = factor(df_s$Manual,
                                                     levels = manualOrder)),
                         ggplot2::aes(fill = .data$Manual, 
                                      y = .data$Freq, 
@@ -1913,11 +1923,10 @@ PlotManualBars <- function(fsom, fcs,
   }
   p2 <- ggplot2::ggplot(data = 
                           transform(df_s,
-                                    MC = factor(.data$MC,
-                                                levels = as.character(
-                                                  seq_len(NMetaclusters(
-                                                    fsom)))),
-                                    Manual = factor(.data$Manual,
+                                    MC = factor(df_s$MC,
+                                                levels = seq_len(NMetaclusters(
+                                                    fsom))),
+                                    Manual = factor(df_s$Manual,
                                                     levels = manualOrder)), 
                         ggplot2::aes(fill = .data$Manual, 
                                      y = .data$Freq, 
@@ -1933,16 +1942,15 @@ PlotManualBars <- function(fsom, fcs,
   
   #----Relative barplots C----
   df_s <- data.frame(table(df[, c(1, 3)]))
-  df_s$MC <- fsom$metaclustering[as.numeric(as.character(df_s$C))]
+  df_s$MC <- fsom$metaclustering[df_s$C]
   p3 <- ggplot2::ggplot(data =
                           transform(df_s,
-                                    C = factor(.data$C,
-                                               levels = as.character(
-                                                 seq_len(NClusters(fsom)))),
-                                    MC = factor(.data$MC,
-                                                levels = as.character(seq_len(
-                                                  NMetaclusters(fsom)))),
-                                    Manual = factor(.data$Manual,
+                                    C = factor(df_s$C,
+                                               levels = seq_len(NClusters(fsom))),
+                                    MC = factor(df_s$MC,
+                                                levels = seq_len(
+                                                  NMetaclusters(fsom))),
+                                    Manual = factor(df_s$Manual,
                                                     levels = manualOrder)),
                         ggplot2::aes(fill = .data$Manual, 
                                      y = .data$Freq, 
@@ -1960,19 +1968,19 @@ PlotManualBars <- function(fsom, fcs,
   
   #----C composition----
   df_s <- data.frame(table(df[, c(1, 3)]))
-  for (c in as.character(seq_len(NClusters(fsom)))){
+  for (c in seq_len(NClusters(fsom))){
     df_s$Freq[df_s$C == c] <- df_s$Freq[df_s$C == c]/sum(df_s$Freq[df_s$C == c])
   }
-  df_s$MC <- fsom$metaclustering[as.numeric(as.character(df_s$C))]
+  df_s$MC <- fsom$metaclustering[df_s$C]
   p4 <- ggplot2::ggplot(data = 
                           transform(df_s,
-                                    C = factor(.data$C,
-                                               levels = as.character(seq_len(
-                                                 NClusters(fsom)))),
-                                    MC = factor(.data$MC,
-                                                levels = as.character(seq_len(
-                                                  NMetaclusters(fsom)))),
-                                    Manual = factor(.data$Manual,
+                                    C = factor(df_s$C,
+                                               levels = seq_len(
+                                                 NClusters(fsom))),
+                                    MC = factor(df_s$MC,
+                                                levels = seq_len(
+                                                  NMetaclusters(fsom))),
+                                    Manual = factor(df_s$Manual,
                                                     levels = manualOrder)), 
                         ggplot2::aes(fill = .data$Manual, 
                                      y = .data$Freq, 
