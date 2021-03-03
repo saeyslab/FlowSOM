@@ -89,8 +89,8 @@ BuildMST <- function(fsom, silent = FALSE, tSNE = FALSE){
 #' @export
 FlowSOMSubset <- function(fsom, ids){
   fsom_tmp <- fsom
-  fsom_tmp$data <- fsom$data[ids, ]
-  fsom_tmp$map$mapping <- fsom$map$mapping[ids, ]
+  fsom_tmp$data <- fsom$data[ids, , drop = FALSE]
+  fsom_tmp$map$mapping <- fsom$map$mapping[ids, , drop = FALSE]
   fsom_tmp <- UpdateDerivedValues(fsom_tmp)
   return(fsom_tmp)
 }
@@ -372,6 +372,17 @@ TestOutliers <- function(fsom,
 #' @param fsom FlowSOM object
 #' 
 #' @return The number of clusters
+#' 
+#' @examples 
+#'  # Build FlowSom result
+#'  fileName <- system.file("extdata", "68983.fcs", package = "FlowSOM")
+#'  ff <- flowCore::read.FCS(fileName)
+#'  flowSOM.res <- FlowSOM(ff,
+#'                         compensate = TRUE, transform = TRUE, scale = TRUE,
+#'                         colsToUse = c(9, 12, 14:18),
+#'                         maxMeta = 10)
+#'  NClusters(flowSOM.res)
+#' 
 #' @export
 NClusters <- function(fsom){
   fsom <- UpdateFlowSOM(fsom)
@@ -385,6 +396,16 @@ NClusters <- function(fsom){
 #' @param fsom FlowSOM object
 #' 
 #' @return The number of metaclusters
+#' 
+#' @examples 
+#'  # Build FlowSom result
+#'  fileName <- system.file("extdata", "68983.fcs", package = "FlowSOM")
+#'  ff <- flowCore::read.FCS(fileName)
+#'  flowSOM.res <- FlowSOM(ff,
+#'                         compensate = TRUE, transform = TRUE, scale = TRUE,
+#'                         colsToUse = c(9, 12, 14:18),
+#'                         maxMeta = 10)
+#'  NMetaclusters(flowSOM.res)
 #' @export
 NMetaclusters <- function(fsom){
   fsom <- UpdateFlowSOM(fsom)
