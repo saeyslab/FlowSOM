@@ -170,12 +170,16 @@ FlowSOM <- function(input, pattern = ".fcs",
 #' 
 #' @export
 print.FlowSOM <- function(x, ...){
-  cat("FlowSOM model trained on", nrow(x$data), "cells and", 
-      length(x$map$colsUsed), "markers, \n using a",
-     paste0(x$map$xdim,"x",x$map$ydim), paste0("grid (",NClusters(x)), "clusters) and",
-      NMetaclusters(x), "metaclusters.")
-
-  cat("\n\nMarkers used: ", paste(x$prettyColnames[x$map$colsUsed], collapse =", "))
+  if(!is.null(x$map)){
+    cat("FlowSOM model trained on", nrow(x$data), "cells and", 
+        length(x$map$colsUsed), "markers, \n using a",
+       paste0(x$map$xdim,"x",x$map$ydim), paste0("grid (",NClusters(x)), "clusters) and",
+        NMetaclusters(x), "metaclusters.")
+  
+    cat("\n\nMarkers used: ", paste(x$prettyColnames[x$map$colsUsed], collapse =", "))
+  } else {
+    cat("FlowSOM model to train on", nrow(x$data), "cells.")
+  }
   
   if(!is.null(x$metaclustering)){
     cat("\n\nMetacluster cell count:\n")
@@ -665,6 +669,8 @@ GetChannels <- function(object, markers, exact = TRUE) {
     stop("Object should be of class flowFrame or FlowSOM")
   }
   
+  if (is.logical(markers)) markers <- which(markers)
+  
   channelnames <- c()
   for (marker in markers){
     if(is.numeric(marker)) {
@@ -729,7 +735,9 @@ GetMarkers <- function(object, channels, exact = TRUE) {
   } else {
     stop("Object should be of class flowFrame or FlowSOM")
   }
-
+  
+  if (is.logical(channels)) channels <- which(channels)
+  
   markernames <- c()
   for (channel in channels){
     if (is.numeric(channel)) {

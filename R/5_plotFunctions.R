@@ -447,7 +447,7 @@ PlotLabels <- function(fsom,
 #' 
 #' # Plot the node IDs
 #' PlotNumbers(flowSOM.res)
-#' PlotNumbers(flowSOM.res, "Metaclusters")
+#' PlotNumbers(flowSOM.res, "metaclusters")
 #' 
 #' PlotNumbers(flowSOM.res,
 #'             view = "grid")
@@ -2435,9 +2435,10 @@ FlowSOMmary <- function(fsom, plotFile = "FlowSOMmary.pdf"){
                     ")")
   datatable1 <- cbind(datatable1,
                       "Total number of clusters" = fsom$map$nNodes,
-                      "Markers used for FlowSOM" = paste(fsom$prettyColnames[
-                        fsom$map$colsUsed], collapse = ",\t") %>% 
-                        gsub(pattern, "\\1\n", .))
+                      "Markers used for FlowSOM" = 
+                        gsub(pattern, "\\1\n",
+                             paste(fsom$prettyColnames[fsom$map$colsUsed],
+                                   collapse = ",\t")))
   datatable1 <- format(datatable1, digits = 2)
   t1 <- ggpubr::ggtexttable(datatable1, theme = ggpubr::ttheme("minimal"),
                             rows = NULL)
