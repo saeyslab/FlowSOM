@@ -9,6 +9,7 @@ PlotFileScatters(
   channels = NULL,
   yMargin = NULL,
   yLabel = c("marker"),
+  quantiles = NULL,
   names = NULL,
   groups = NULL,
   color = NULL,
@@ -16,6 +17,7 @@ PlotFileScatters(
   maxPoints = 50000,
   ncol = NULL,
   nrow = NULL,
+  silent = FALSE,
   plotFile = "FileScatters.png"
 )
 }
@@ -24,8 +26,8 @@ PlotFileScatters(
 \code{\link{AggregateFlowFrames}} function) or a 
 vector of paths pointing to fcs files}
 
-\item{channels}{Vector of channels that need to be plotted, if NULL
-(default), all channels from the input will be 
+\item{channels}{Vector of channels or markers that need to be plotted, 
+if NULL (default), all channels from the input will be 
 plotted}
 
 \item{yMargin}{Optional parameter to specify the margins of the 
@@ -34,8 +36,12 @@ y-axis}
 \item{yLabel}{Determines the label of the y-axis. Can be "marker" and\\or
 "channel". Default = "marker".}
 
+\item{quantiles}{If provided (default NULL), a numeric vector with values
+between 0 and 1. These quantiles are indicated on the plot}
+
 \item{names}{Optional parameter to provide filenames. If \code{NULL} 
-(default), the filenames will be numbers}
+(default), the filenames will be numbers. Duplicated 
+filenames will be made unique.}
 
 \item{groups}{Optional parameter to specify groups of files, should have
 the same length as the \code{input}. Id \code{NULL} 
@@ -54,6 +60,9 @@ channel, default is 50000}
 \item{ncol}{Number of columns in the final plot, optional}
 
 \item{nrow}{Number of rows in the final plot, optional}
+
+\item{silent}{If FALSE, prints an update every time it starts processing 
+a new file. Default = FALSE.}
 
 \item{plotFile}{Path to png file, default is "FileScatters.png". If 
 \code{NULL}, the output will be a list of ggplots}

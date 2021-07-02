@@ -1,3 +1,52 @@
+CHANGES IN VERSION 2.1.24 (2021/07/02)
+--------------------------------------
+o Added UpdateMetaclusters function, removed RelabelMetaclusters, 
+  ReassignMetaclusters and Reordermetaclusters functions.
+o Updated CheatSheet
+o Added code from UpdateDerivedValues for metaclustersMFIs to UpdateFlowSOM
+
+CHANGES IN VERSION 2.1.23 (2021/06/30)
+--------------------------------------
+o Added checkNames = FALSE in MetaclusterMFIs
+
+CHANGES IN VERSION 2.1.22 (2021/06/30)
+--------------------------------------
+o Reordered code in UpdateDerivedValues, RelabelMetaclusters, 
+  ReorderMetaclusters and ReassignMetaclusters.
+
+CHANGES IN VERSION 2.1.21 (2021/06/15)
+--------------------------------------
+o Added ReorderMetaclusters, to reorder the metacluster levels.
+  
+CHANGES IN VERSION 2.1.20 (2021/06/07)
+--------------------------------------
+o Updated PlotManualBars, Plot2DScatters and FlowSOMmary so that it works 
+  with relabeled metaclusters.
+
+CHANGES IN VERSION 2.1.19 (2021/05/21)
+--------------------------------------
+o AggregateFlowFrames accepts channels and markers
+o AggregateFlowFrames now gives a warning when files do not contain the same 
+  number of channels
+o AggregateFlowFrames now gives warnings when files do not contain the same 
+  markers
+o Bugfix in AggregateFlowFrames now works when one channel is given
+o Bugfix in PlotFileScatters now works when one channel is given
+o Added silent parameter in PlotFileScatters to stop messages
+o PlotFileScatters supports channels and markers now
+o Add info to FlowSOM object: date when flowSOM object is made, FlowSOM verion 
+  and arguments given to FlowSOM call
+o Fixed bug in PlotManualBars
+o Added silent parameter in NewData. GetFeatures' silent parameter now also
+  surpresses message from NewData (more concrete: ReadInput)
+
+CHANGES IN VERSION 2.1.17 (2021/04/16)
+--------------------------------------
+o Added ReassignMetaclusters, to rename or split metaclusters
+o Fixed issue where a lot of warnings were printed in FlowSOMmary
+o PlotFilescatters now makes filenames unique if they are not and the 
+  function now works with output of AggregateFlowFrames
+
 CHANGES IN VERSION 2.1.16 (2021/04/13) - Bioconductor 1.99.7
 --------------------------------------
 o PlotManualBars allows input of NewData function
@@ -9,7 +58,7 @@ o Fixed warnings with ggtexttable in FlowSOMmary
 CHANGES IN VERSION 2.1.13 (2021/04/06)
 --------------------------------------
 o Added RelabelMetaclusters 
-o PlotFileScatters now has a parameter to change the y-axis label to markers
+o PlotFileScatters now has a parameter to change the y-axis label to markers 
   and/or channels (yLabel)
 o Now TRUE/FALSE vector is accepted as input in GetMarkers/GetChannels
 

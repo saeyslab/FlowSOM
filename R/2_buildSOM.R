@@ -103,7 +103,7 @@ UpdateDerivedValues <- function(fsom){
   fsom$map$pctgs <- pctgs
   
   
-  if(! is.null(fsom$metaclustering)){
+  if(!is.null(fsom$metaclustering)){
     fsom$map$metaclusterMFIs <- 
       data.frame(fsom$data, 
                  mcl = fsom$metaclustering[fsom$map$mapping[, 1]],
@@ -111,7 +111,8 @@ UpdateDerivedValues <- function(fsom){
       dplyr::group_by(.data$mcl, .drop = FALSE) %>% 
       dplyr::summarise_all(stats::median) %>% 
       dplyr::select(-.data$mcl) %>% 
-      as.matrix()
+      data.frame(row.names = levels(fsom$metaclustering),
+                 check.names = FALSE)
   }
   
   return(fsom)
@@ -551,7 +552,8 @@ GetClusterCVs <- function(fsom){
 #' @param  filenames        An optional vector with filenames that will be used
 #'                          as rownames in the count matrices. If NULL (default)
 #'                          either the paths will be used or a numerical vector.
-#' @param  silent           Logical. If TRUE, print progress messages
+#' @param  silent           Logical. If \code{TRUE}, print progress messages.
+#'                          Default = \code{FALSE}.
 #' 
 #' @return matrix with features per population - type combination
 #'         
@@ -654,10 +656,11 @@ GetFeatures <- function(fsom,
   for (file in files){
     i <- i + 1
     if (isFALSE(silent)){
-      writeLines(paste0("Mapping file ", i, " of ", nfiles, "."))
+      message(paste0("Mapping file ", i, " of ", nfiles, "."))
     }
     fsom_tmp <- suppressWarnings(NewData(fsom = fsom,
-                                         input = file))
+                                         input = file,
+                                         silent = silent))
     
     counts_t <- table(GetClusters(fsom_tmp))
     C_counts[i, paste0("C", names(counts_t))] <- counts_t
@@ -925,14 +928,14 @@ GetCounts <- function(fsom, level = "metaclusters"){
   fsom <- UpdateFlowSOM(fsom)
   if (!is.null(fsom$metaclustering) && level == "metaclusters"){
     counts <- rep(NA, NMetaclusters(fsom))
-    names(counts) <- paste0("MC", levels(fsom$metaclustering))
+    names(counts) <- paste("MC", levels(fsom$metaclustering))
     tmp <- table(GetMetaclusters(fsom))
-    counts[paste0("MC", names(tmp))] <- tmp
+    counts[paste("MC", names(tmp))] <- tmp
   } else if (level == "clusters"){
     counts <- rep(NA, NClusters(fsom))
-    names(counts) <- paste0("C", seq_len(NClusters(fsom)))
+    names(counts) <- paste("C", seq_len(NClusters(fsom)))
     tmp <- table(GetClusters(fsom))
-    counts[paste0("C", names(tmp))] <- tmp
+    counts[paste("C", names(tmp))] <- tmp
   } else stop("level should be \"clusters\" or \"metaclusters\"")
   return(counts)
 }
