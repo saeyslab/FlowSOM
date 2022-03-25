@@ -4,10 +4,16 @@
 \alias{GetMetaclusterCVs}
 \title{GetMetaclusterCVs}
 \usage{
-GetMetaclusterCVs(fsom)
+GetMetaclusterCVs(fsom, colsUsed = FALSE, prettyColnames = FALSE)
 }
 \arguments{
 \item{fsom}{Result of calling the FlowSOM function}
+
+\item{colsUsed}{Logical. Should report only the columns used to 
+build the SOM. Default = FALSE.}
+
+\item{prettyColnames}{Logical. Should report pretty column names instead
+of standard column names. Default = FALSE.}
 }
 \value{
 Metacluster CVs

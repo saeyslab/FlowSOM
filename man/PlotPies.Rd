@@ -22,7 +22,7 @@ PlotPies(
 \item{...}{Additional arguments to pass to \code{\link{PlotFlowSOM}}}
 }
 \value{
-Ggplot plot
+ggplot plot
 }
 \description{
 Plot comparison with other clustering

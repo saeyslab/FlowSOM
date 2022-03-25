@@ -17,11 +17,11 @@ PlotStars(
 
 \item{markers}{Markers to plot (will be parsed by GetChannels)}
 
-\item{colorPalette}{ColorPalette to use}
+\item{colorPalette}{Color palette to use}
 
 \item{list_insteadof_ggarrange}{If FALSE (default), the plot and the legend
 are combined by ggarrange. If TRUE, the
-seperate elements are returned in a list,
+separate elements are returned in a list,
 to allow further customization.}
 
 \item{...}{Additional arguments to pass to \code{\link{PlotFlowSOM}}}

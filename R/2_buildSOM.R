@@ -29,7 +29,7 @@
 #' 
 #' # Build the Self-Organizing Map
 #' # E.g. with gridsize 5x5, presenting the dataset 20 times, 
-#' # no use of MST in neighbourhood calculations in between
+#' # no use of MST in neighborhood calculations in between
 #' flowSOM.res <- BuildSOM(flowSOM.res, colsToUse = c(9, 12, 14:18),
 #'                         xdim = 5, ydim = 5, rlen = 20)
 #' 
@@ -77,9 +77,12 @@ UpdateDerivedValues <- function(fsom){
   
   fsom$map$cvValues <-
     t(sapply(seq_len(fsom$map$nNodes), function(i) {
-      apply(subset(fsom$data, fsom$map$mapping[, 1] == i),
-            2,
-            function(y){
+      clusterSubset <- subset(fsom$data, fsom$map$mapping[, 1] == i)
+      sapply(colnames(clusterSubset), function(colY){
+        y <- clusterSubset[, colY]
+              if (any(is.na(y))) {
+                stop(paste0("NA value found in cluster ", i, " channel ", 
+                            colY, "."))}
               if(length(y) > 0 && mean(y) != 0){
                 stats::sd(y)/mean(y)
               } else {
@@ -95,6 +98,13 @@ UpdateDerivedValues <- function(fsom){
     }))
   fsom$map$sdValues[is.nan(fsom$map$sdValues)] <- 0 
   colnames(fsom$map$sdValues) <- colnames(fsom$data)
+  
+  fsom$map$madValues <-
+    t(sapply(seq_len(fsom$map$nNodes), function(i) {
+      apply(subset(fsom$data, fsom$map$mapping[, 1] == i), 2, stats::mad)
+    }))
+  fsom$map$madValues[is.nan(fsom$map$madValues)] <- 0 
+  colnames(fsom$map$madValues) <- colnames(fsom$data)
   
   pctgs <- rep(0, fsom$map$nNodes)
   names(pctgs) <- as.character(seq_len(fsom$map$nNodes))
@@ -181,7 +191,7 @@ SOM <- function (data, xdim = 10, ydim = 10, rlen = 10, mst = 1,
     }
   }
   
-  # Initialize the neighbourhood
+  # Initialize the neighborhood
   nhbrdist <- as.matrix(stats::dist(grid, method = "maximum"))
   
   # Initialize the radius
@@ -317,7 +327,7 @@ Initialize_PCA <- function(data, xdim, ydim){
 #' @param realClusters      array with real cluster values
 #' @param predictedClusters array with predicted cluster values
 #' @param weighted          logical. Should the mean be weighted
-#'                          depending on the number of poins in the predicted 
+#'                          depending on the number of points in the predicted 
 #'                          clusters
 #'                           
 #' @return Mean purity score, worst score, number of clusters with score < 0.75
@@ -343,7 +353,7 @@ Purity <- function(realClusters, predictedClusters, weighted = TRUE){
            sum(maxPercentages<0.75)))
 }
 
-#' Calculate distance matrix using a minimal spanning tree neighbourhood
+#' Calculate distance matrix using a minimal spanning tree neighborhood
 #'
 #' @param  X matrix in which each row represents a point
 #'
@@ -367,11 +377,13 @@ Dist.MST <- function(X){
 #' @param  selectionColumn   Column of the FCS file indicating the original cell
 #'                           ids. If NULL (default), no selection is made.
 #' @param  silent            If FALSE (default), print some extra output
-#' @param  outputDir         Directory to save the fcs files. Default to the
+#' @param  outputDir         Directory to save the FCS files. Default to the
 #'                           current working directory (".")
 #' @param  suffix            Suffix added to the filename. Default _FlowSOM.fcs
+#' @param ...                Options to pass on to the read.FCS function (e.g.
+#'                           truncate_max_range)
 #'
-#' @return Saves the extended fcs file as [originalName]_FlowSOM.fcs
+#' @return Saves the extended FCS file as [originalName]_FlowSOM.fcs
 #'
 #' @examples
 #' fileName <- system.file("extdata", "68983.fcs", package = "FlowSOM")
@@ -387,7 +399,8 @@ SaveClustersToFCS <- function(fsom,
                               selectionColumn = NULL, 
                               silent = FALSE,
                               outputDir = ".",
-                              suffix = "_FlowSOM.fcs"){
+                              suffix = "_FlowSOM.fcs",
+                              ...){
   if (length(preprocessedFiles) != 0 & length(preprocessedFiles)!= length(originalFiles)){ 
     stop("The vector of preprocessedFiles should be the same length as ",
          "the originalFiles when provided.")
@@ -396,9 +409,9 @@ SaveClustersToFCS <- function(fsom,
   for(i in seq_along(originalFiles)){
     if(!silent){message("Mapping ", originalFiles[i])}
     
-    ff_o <- flowCore::read.FCS(originalFiles[i])
+    ff_o <- flowCore::read.FCS(originalFiles[i], ...)
     if(!is.null(preprocessedFiles)){
-      ff <- flowCore::read.FCS(preprocessedFiles[i])
+      ff <- flowCore::read.FCS(preprocessedFiles[i], ...)
     } else {
       ff <- ff_o
     }
@@ -428,7 +441,7 @@ SaveClustersToFCS <- function(fsom,
     }
     colnames(m) <- c("FlowSOM_cluster", "FlowSOM_x", "FlowSOM_y", "FlowSOM_meta")[seq_len(newCols)]
     
-    # Save as fcs file
+    # Save as FCS file
     ff_o <- flowCore::fr_append_cols(ff_o, m)
     outputFile <- file.path(outputDir,
                             gsub("\\.fcs$",
@@ -517,6 +530,67 @@ GetClusterMFIs <- function(fsom, colsUsed = FALSE, prettyColnames = FALSE){
   return(MFIs)
 }
 
+#' Get percentage-positive values for all clusters
+#'
+#' @param  fsom             FlowSOM object as generated by the FlowSOM function
+#'                          or the BuildSOM function
+#' @param  cutoffs          named numeric vector. Upper bounds of negative
+#'                          population fluorescence-intensity values for each
+#'                          marker / channel.
+#' @param  colsUsed         logical. Should report only the columns used to 
+#'                          build the SOM. Default = FALSE.
+#' @param  prettyColnames   logical. Should report pretty column names instead
+#'                          of standard column names. Default = FALSE.
+#'                          
+#' @return Matrix with percentages of cells that are positive in selected markers per each cluster
+#'
+#' @examples 
+#' fileName <- system.file("extdata", "68983.fcs", package = "FlowSOM")
+#' flowSOM.res <- FlowSOM(fileName, compensate = TRUE, transform = TRUE,
+#'                       scale = TRUE, colsToUse = c(9, 12, 14:18), nClus = 10)
+#' perc_pos <- GetClusterPercentagesPositive(flowSOM.res, cutoffs = c('CD4' = 5000))
+#' @export 
+GetClusterPercentagesPositive <- function(fsom, cutoffs, colsUsed = FALSE, prettyColnames = FALSE){
+  fsom <- UpdateFlowSOM(fsom)
+  cl_per_cell <- GetClusters(fsom)
+  clusters <- seq_len(NClusters(fsom))
+  
+  if(is.null(fsom$map$colsUsed)) colsUsed <- FALSE
+  if(is.null(fsom$prettyColnames)) prettyColnames <- FALSE
+  
+  channels <- GetChannels(fsom, names(cutoffs))
+  if(colsUsed && !prettyColnames){
+    channels <- intersect(channels, fsom$map$colsUsed)
+  }
+  
+  perc_pos <- matrix(NA,
+                     nrow = length(clusters),
+                     ncol = length(cutoffs))
+  rownames(perc_pos) <- clusters
+  colnames(perc_pos) <- names(cutoffs)
+  
+  i <- 0
+  for (cluster in clusters){
+    i <- i + 1
+    
+    data_per_cluster <- fsom$data[cl_per_cell == cluster, channels, drop = FALSE]
+    
+    if (length(data_per_cluster) > 0){
+      data_per_cluster <- split(data_per_cluster, col(data_per_cluster))
+      names(data_per_cluster) <- channels
+      npoints <- length(data_per_cluster[[1]])
+      perc_pos_per_channel <- mapply(function(data_per_channel, cutoff) sum(data_per_channel > cutoff) / npoints,
+                                     data_per_cluster,
+                                     cutoffs)
+      perc_pos[i, ] <- perc_pos_per_channel
+    }
+  }
+  if (prettyColnames){
+    colnames(perc_pos) <- fsom$prettyColnames[channels]
+  }
+  return(perc_pos)
+}
+
 #' Get CV values for all clusters
 #'
 #' @param  fsom             FlowSOM object as generated by the FlowSOM function
@@ -537,18 +611,22 @@ GetClusterCVs <- function(fsom){
 
 #' GetFeatures
 #' 
-#' Map fcs files on an existing FlowSOM object
+#' Map FCS files on an existing FlowSOM object
 #'
 #' @param  fsom             FlowSOM object as generated by the FlowSOM function
 #'                          or the BuildSOM function
-#' @param  files            Either a vector of fcs files or paths to fcs files  
+#' @param  files            Either a vector of FCS files or paths to FCS files  
 #' @param  level            Level(s) of interest. Default is c("clusters",
 #'                          "metaclusters"), but can also be only one of them
 #' @param  type             Type of features to extract. Default is "counts", 
-#'                          can be a vector of "counts", "percentages" and/or 
-#'                          "MFIs"         
+#'                          can be a vector of "counts", "percentages", "MFIs"
+#'                          and/or "percentages_positive"
 #' @param  MFI              Vector with channels / markers for which the MFI 
 #'                          values must be returned when "MFIs" is in \code{type}
+#' @param  positive_cutoffs Named vector with fluorescence-intensity values
+#'                          per channel / marker that are the upper bounds for
+#'                          a negative population when "percentages_positive" is
+#'                          in \code{type}
 #' @param  filenames        An optional vector with filenames that will be used
 #'                          as rownames in the count matrices. If NULL (default)
 #'                          either the paths will be used or a numerical vector.
@@ -580,12 +658,25 @@ GetClusterCVs <- function(fsom){
 #'                          MFI = "APC-A", 
 #'                          filenames = c("ff_1001-2000", "ff_2001-3000"))
 #'
+#'  # Get percentages of positive cells
+#'  positive_cutoffs <- c('CD8' = 1.5,
+#'                        'CD4' = 0.3,
+#'                        'CD19' = 1.3,
+#'                        'CD3' = -0.3)
+#'  
+#'  perc_pos <- GetFeatures(fsom = flowSOM.res, 
+#'                          files = c(ff[1001:2000, ], ff[2001:3000, ]),
+#'                          type = c("percentages_positive"), 
+#'                          positive_cutoffs = positive_cutoffs,
+#'                          filenames = c("ff_1001-2000", "ff_2001-3000"))
+#'                          
 #' @export 
 GetFeatures <- function(fsom, 
                         files, 
                         level = c("clusters", "metaclusters"),
                         type = "counts", 
                         MFI = NULL, 
+                        positive_cutoffs = NULL,
                         filenames = NULL, 
                         silent = FALSE) {
   nclus <- NClusters(fsom)
@@ -601,12 +692,20 @@ GetFeatures <- function(fsom,
     stop("level should be \"clusters\" and/or \"metaclusters\".")
   }
   
-  if (sum(type %in% c("counts", "percentages", "MFIs")) != length(type)){
-    stop("level should be \"counts\", \"percentages\" and/or \"MFIs\".")
+  if (sum(type %in% c("counts", "percentages", "MFIs", "percentages_positive")) != length(type)){
+    stop("level should be \"counts\", \"percentages\", \"MFIs\" and/or \"percentages_positive\".")
   }
   
   if ("MFIs" %in% type & is.null(MFI)){
     stop("Please provide channel names for MFI calculation")
+  }
+  
+  if ("percentages_positive" %in% type & is.null(positive_cutoffs)) {
+    stop("Please provide positive cutoffs for percentage-positive calculation")
+  }
+  
+  if (!is.null(positive_cutoffs) & length(names(positive_cutoffs)) == 0){
+    stop("positive_cutoffs must be a named vector")
   }
   
   matrices <- list()
@@ -630,7 +729,6 @@ GetFeatures <- function(fsom,
                        dimnames = list(filenames, 
                                        paste0("C", seq_len(nclus))))
   
-  
   if ("MFIs" %in% type) {
     nmetaclus <- NMetaclusters(fsom)
     MFI <- GetChannels(fsom, MFI)
@@ -650,6 +748,28 @@ GetFeatures <- function(fsom,
                                                         seq_len(nmetaclus)), 
                                                  each = nmarker), 
                                              " ", fsom$prettyColnames[MFI])))
+  }
+  
+  if ("percentages_positive" %in% type) {
+    nmetaclus <- NMetaclusters(fsom)
+    positive_cutoffs <- unlist(positive_cutoffs)
+    perc_pos <- GetChannels(fsom, names(positive_cutoffs))
+    nmarker <- length(perc_pos)
+    C_perc_pos <- matrix(NA,
+                         nrow = nfiles,
+                         ncol = nmarker * nclus,
+                         dimnames = list(filenames,
+                                         paste0(rep(paste0("C", seq_len(nclus)), 
+                                                    each = nmarker), 
+                                                " ", fsom$prettyColnames[perc_pos])))
+    MC_perc_pos <- matrix(NA,
+                          nrow = nfiles,
+                          ncol = nmarker * nmetaclus,
+                          dimnames = list(filenames,
+                                          paste0(rep(paste0("MC", 
+                                                            seq_len(nmetaclus)), 
+                                                     each = nmarker), 
+                                                 " ", fsom$prettyColnames[perc_pos])))
   }
   
   #----Loop over files----
@@ -678,6 +798,15 @@ GetFeatures <- function(fsom,
         MC_MFIs[i, ] <- as.vector(t(GetMetaclusterMFIs(fsom_tmp)[, MFI]))
       }
     }
+    
+    if ("percentages_positive" %in% type){
+      if ("clusters" %in% level){
+        C_perc_pos[i, ] <- as.vector(t(GetClusterPercentagesPositive(fsom_tmp, cutoffs = positive_cutoffs)))
+      }
+      if ("metaclusters" %in% level){
+        MC_perc_pos[i, ] <- as.vector(t(GetMetaclusterPercentagesPositive(fsom_tmp, cutoffs = positive_cutoffs)))
+      }
+    }
   }
   
   #----Add matrices to list----
@@ -690,10 +819,14 @@ GetFeatures <- function(fsom,
     if ("percentages" %in% type){
       C_pctgs <- prop.table(C_counts, margin = 1)
       colnames(C_pctgs) <- paste0("%", colnames(C_pctgs))
+      attr(C_pctgs, "outliers") <- C_outliers
       matrices[["cluster_percentages"]] <- C_pctgs
     }
     if ("MFIs" %in% type){
       matrices[["cluster_MFIs"]] <- C_MFIs
+    }
+    if ("percentages_positive" %in% type){
+      matrices[["cluster_percentages_positive"]] <- C_perc_pos
     }
   }
   
@@ -716,6 +849,9 @@ GetFeatures <- function(fsom,
     }
     if ("MFIs" %in% type){
       matrices[["metacluster_MFIs"]] <- MC_MFIs
+    }
+    if ("percentages_positive" %in% type){
+      matrices[["metacluster_percentages_positive"]] <- MC_perc_pos
     }
   }
   
@@ -748,7 +884,7 @@ GetFeatures <- function(fsom,
 #'                           nClus = 10)
 #'    
 #' # Create new data
-#' # To illustrate the output, we here generate new fcs files (with more 
+#' # To illustrate the output, we here generate new FCS files (with more 
 #' # cells in metaclusters 1 and 9).
 #' # In practice you would not generate any new file but use your different
 #' # files from your different groups

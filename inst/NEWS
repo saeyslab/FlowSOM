@@ -1,3 +1,81 @@
+CHANGES IN VERSION 2.1.38 (2022/02/24)
+--------------------------------------
+o Added possibility to provide a seed when using metaClustering_hclust,
+  metaClustering_kmeans or metaClustering_som
+
+CHANGES IN VERSION 2.1.37 (2022/02/22)
+--------------------------------------
+o Added possibility to provide additional arguments to the read.FCS function in 
+  SaveClustersToFCS() function
+o PlotFileScatters now accepts other File ID columns, not anymore stricted to 
+  "File" 
+
+CHANGES IN VERSION 2.1.36 (2022/01/13)
+--------------------------------------
+o Added a warning when using "backgroundColor" instead of "backgroundColors"
+  in PlotStars
+o Clusters centers in Plot2DScatters is now colored the same as the cluster 
+  cells when using manual colors
+
+CHANGES IN VERSION 2.1.35 (2022/01/13)
+--------------------------------------
+o Added a warning in UpdateDerivedValue when using FlowSOM on an FCS with NA value
+
+CHANGES IN VERSION 2.1.34 (2021/12/14)
+--------------------------------------
+o Happy Holidays!
+o Edited documentation of Plot2DScatters ("indices of clusters/metaclusters")
+o Outlier counts are also returned as attributes when extracting percentages
+  with GetFeatures
+
+CHANGES IN VERSION 2.1.33 (2021/10/27)
+--------------------------------------
+o Title of Plot2DScatters now gives all the (meta)clusters instead of just one
+o Added warning when wrong manual colors are used in Plot2DScatters
+o Added the ability to use markers and/or channels in Plot2DScatters
+o Added GetClusterPercentagesPositives and GetMetaclusterPercentagesPositives to
+  FlowSOM CheatSheet 
+o Edited text from GetFeatures on cheatsheet
+
+CHANGES IN VERSION 2.1.32 (2021/10/22)
+--------------------------------------
+o Add marker outliers in TestOUtliers function
+o Add mad calculation in UpdateDerivedValues function
+
+CHANGES IN VERSION 2.1.31 (2021/10/05)
+--------------------------------------
+o In NewData, the new FlowSOM object gets prettyColnames from the old one
+
+CHANGES IN VERSION 2.1.30 (2021/10/04)
+--------------------------------------
+o GetFeatures can now return % of positive cells per channel for each cluster
+  or metacluster, see parameters type and positives_cutoff
+o New exported function GetClusterPercentagesPositive
+o New exported function GetMetaclusterPercentagesPositive
+
+CHANGES IN VERSION 2.1.29 (2021/07/30)
+--------------------------------------
+o Update documentation 
+
+CHANGES IN VERSION 2.1.28 (2021/07/30)
+--------------------------------------
+o Added height and width parameter to PlotFileScatters
+o Fixed bug in PlotFileScatters
+
+CHANGES IN VERSION 2.1.27 (2021/07/27)
+--------------------------------------
+o Fixed typos and more consistent spelling
+
+CHANGES IN VERSION 2.1.26 (2021/07/13)
+--------------------------------------
+o Adapted GetMetaclusterCVs function so that it works after using 
+  UpdateMetaclusters
+o Fixed typos
+
+CHANGES IN VERSION 2.1.25 (2021/07/09)
+--------------------------------------
+o Adapted PlotManualBars function so that it works after using UpdateMetaclusters
+
 CHANGES IN VERSION 2.1.24 (2021/07/02)
 --------------------------------------
 o Added UpdateMetaclusters function, removed RelabelMetaclusters, 
@@ -47,7 +125,7 @@ o Fixed issue where a lot of warnings were printed in FlowSOMmary
 o PlotFilescatters now makes filenames unique if they are not and the 
   function now works with output of AggregateFlowFrames
 
-CHANGES IN VERSION 2.1.16 (2021/04/13) - Bioconductor 1.99.7
+CHANGES IN VERSION 2.1.16 (2021/04/13)
 --------------------------------------
 o PlotManualBars allows input of NewData function
 

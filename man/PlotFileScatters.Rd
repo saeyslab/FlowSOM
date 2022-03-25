@@ -6,6 +6,7 @@
 \usage{
 PlotFileScatters(
   input,
+  fileID = "File",
   channels = NULL,
   yMargin = NULL,
   yLabel = c("marker"),
@@ -17,14 +18,20 @@ PlotFileScatters(
   maxPoints = 50000,
   ncol = NULL,
   nrow = NULL,
+  width = NULL,
+  height = NULL,
   silent = FALSE,
   plotFile = "FileScatters.png"
 )
 }
 \arguments{
-\item{input}{Either a flowSet, a flowFrame (output from the 
-\code{\link{AggregateFlowFrames}} function) or a 
-vector of paths pointing to fcs files}
+\item{input}{Either a flowSet, a flowFrame with a file ID column (e.g. 
+output from the \code{\link{AggregateFlowFrames}} includes
+a "File" column) or a vector of paths pointing to FCS files}
+
+\item{fileID}{Name of the file ID column when the input is a flowFrame, 
+default to "File" (File ID column in the 
+\code{\link{AggregateFlowFrames}} flowFrame output).}
 
 \item{channels}{Vector of channels or markers that need to be plotted, 
 if NULL (default), all channels from the input will be 
@@ -60,6 +67,12 @@ channel, default is 50000}
 \item{ncol}{Number of columns in the final plot, optional}
 
 \item{nrow}{Number of rows in the final plot, optional}
+
+\item{width}{Width of png file. By default NULL the width parameter is 
+estimated based on the input.}
+
+\item{height}{Height of png file. By default NULL the width parameter is 
+estimated based on the input.}
 
 \item{silent}{If FALSE, prints an update every time it starts processing 
 a new file. Default = FALSE.}

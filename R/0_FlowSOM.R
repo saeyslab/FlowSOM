@@ -10,13 +10,13 @@
 #' @param compensate    logical, does the data need to be compensated
 #' @param spillover     spillover matrix to compensate with
 #'                      If NULL and compensate = TRUE, we will look for $SPILL 
-#'                      description in fcs file.
-#' @param transform     logical, does the data need to be transformed with a
-#'                      logicle transform
+#'                      description in FCS file.
+#' @param transform     logical, does the data need to be transformed with the
+#'                      transformation given in \code{transformFunction}.
 #' @param toTransform   column names or indices that need to be transformed.
 #'                      Will be ignored if \code{transformList} is given.
 #'                      If \code{NULL} and transform = \code{TRUE}, column names
-#'                      of \code{$SPILL} description in fcs file will be used.
+#'                      of \code{$SPILL} description in FCS file will be used.
 #' @param transformFunction Defaults to logicleTransform()
 #' @param transformList transformList to apply on the samples.
 #' @param scale         logical, does the data needs to be rescaled. 
@@ -197,21 +197,21 @@ print.FlowSOM <- function(x, ...){
 }
 
 
-#' Aggregate multiple fcs files together
+#' Aggregate multiple FCS files together
 #' 
-#' Aggregate multiple fcs files to analyze them simultaneously. 
-#' A new fcs file is written, which contains about \code{cTotal} cells,
+#' Aggregate multiple FCS files to analyze them simultaneously. 
+#' A new FCS file is written, which contains about \code{cTotal} cells,
 #' with \code{ceiling(cTotal/nFiles)} cells from each file. Two new columns
 #' are added: a column indicating the original file by index, and a noisy 
 #' version of this for better plotting opportunities (index plus or minus a 
 #' value between 0 and 0.1).
 #' 
-#' @param fileNames   Character vector containing full paths to the fcs files
+#' @param fileNames   Character vector containing full paths to the FCS files
 #'                    to aggregate
 #' @param cTotal      Total number of cells to write to the output file
 #' @param channels    Channels/markers to keep in the aggregate. Default NULL 
 #'                    takes all channels of the first file.
-#' @param writeOutput Whether to write the resulting flowframe to a file. 
+#' @param writeOutput Whether to write the resulting flowFrame to a file. 
 #'                    Default FALSE
 #' @param outputFile  Full path to output file. Default "aggregate.fcs"
 #' @param keepOrder If TRUE, the random subsample will be ordered in the same
@@ -334,9 +334,12 @@ AggregateFlowFrames <- function(fileNames,
 #' 
 #' Make a scatter plot per channel for all provided files
 #'
-#' @param  input      Either a flowSet, a flowFrame (output from the 
-#'                    \code{\link{AggregateFlowFrames}} function) or a 
-#'                    vector of paths pointing to fcs files
+#' @param  input      Either a flowSet, a flowFrame with a file ID column (e.g. 
+#'                    output from the \code{\link{AggregateFlowFrames}} includes
+#'                    a "File" column) or a vector of paths pointing to FCS files
+#' @param  fileID     Name of the file ID column when the input is a flowFrame, 
+#'                    default to "File" (File ID column in the 
+#'                    \code{\link{AggregateFlowFrames}} flowFrame output).
 #' @param  channels   Vector of channels or markers that need to be plotted, 
 #'                    if NULL (default), all channels from the input will be 
 #'                    plotted
@@ -359,10 +362,15 @@ AggregateFlowFrames <- function(fileNames,
 #'                    should be displayed. Default is \code{FALSE}
 #' @param  maxPoints Total number of data points that will be plotted per 
 #'                    channel, default is 50000
+#' @param  silent     If FALSE, prints an update every time it starts processing 
+#'                    a new file. Default = FALSE. 
 #' @param  ncol       Number of columns in the final plot, optional
 #' @param  nrow       Number of rows in the final plot, optional
-#' @param silent      If FALSE, prints an update every time it starts processing 
-#'                    a new file. Default = FALSE. 
+#' @param  width      Width of png file. By default NULL the width parameter is 
+#'                    estimated based on the input.
+#' @param  height     Height of png file. By default NULL the width parameter is 
+#'                    estimated based on the input.
+#'  
 #' @param  plotFile   Path to png file, default is "FileScatters.png". If 
 #'                    \code{NULL}, the output will be a list of ggplots 
 #' 
@@ -398,6 +406,7 @@ AggregateFlowFrames <- function(fileNames,
 #'  
 #' @export 
 PlotFileScatters <- function(input, 
+                             fileID = "File",
                              channels = NULL, 
                              yMargin = NULL, 
                              yLabel = c("marker"),
@@ -409,6 +418,8 @@ PlotFileScatters <- function(input,
                              maxPoints = 50000, 
                              ncol = NULL, 
                              nrow = NULL,
+                             width = NULL,
+                             height = NULL,
                              silent = FALSE,
                              plotFile = "FileScatters.png"){
   
@@ -438,7 +449,8 @@ PlotFileScatters <- function(input,
   } else if (is(input, "flowFrame")) {
     ff <- input
     data <- flowCore::exprs(ff)
-    file_values <- data[, "File"]
+    data <- data[,c(channels, fileID)]
+    file_values <- data[, fileID]
     input <- unique(file_values)
   } else {
     channels <- GetChannels(read.FCS(input[1]), channels)
@@ -447,7 +459,7 @@ PlotFileScatters <- function(input,
                               channels = channels,
                               silent = silent)
     data <- ff@exprs
-    file_values <- data[, "File"]
+    file_values <- data[, fileID]
   }
   
   subset <- sample(seq_len(nrow(data)), min(maxPoints, nrow(data)))
@@ -458,6 +470,9 @@ PlotFileScatters <- function(input,
   }
   file_values <- file_values[subset]
   channels <- colnames(data)
+  if (fileID %in% channels){
+    channels <- channels[-grep(fileID, channels)]
+  }
   
   #----Additional warnings---
   if (!is.null(names) & length(unique(file_values)) != length(names)){
@@ -485,7 +500,7 @@ PlotFileScatters <- function(input,
       yLabs <- GetMarkers(ff, channel)
     } else if ("channel" %in% yLabel && length(yLabel) == 1){
       yLabs <- channel
-    } else if (all(c("channel", "marker") %in% yLabel && length(yLabel) == 2)){
+    } else if (all(c("channel", "marker") %in% yLabel) && length(yLabel) == 2){
       yLabs <- paste0(GetMarkers(ff, channel), " (", channel, ")")
     } else stop("yLabel should be \"marker\" and\\or \"channel\"")
     df <- data.frame("intensity" = data[, channel],
@@ -547,9 +562,15 @@ PlotFileScatters <- function(input,
     } else {
       ncol <- ceiling(length(channels) / nrow)
     }
-    png(plotFile, 
-        width = ncol * (60 + 15 * length(unique(file_values))), 
-        height = 250 * nrow)
+    if (is.null(width)){
+      width <-  ncol * (60 + 15 * length(unique(file_values)))
+    }
+    if (is.null(height)){
+      height <-  250 * nrow
+    }
+    png(plotFile,
+        width = width, 
+        height = height)
     p <- ggpubr::annotate_figure(ggarrange(plotlist = plots_list,
                                            common.legend = legend, 
                                            ncol = ncol, nrow = nrow),
@@ -561,18 +582,18 @@ PlotFileScatters <- function(input,
   }
 }
 
-#' Process a flowjo workspace file
+#' Process a FlowJo workspace file
 #'
-#' Reads a flowjo workspace file using the \code{\link{flowWorkspace}} library 
+#' Reads a FlowJo workspace file using the \code{\link{flowWorkspace}} library 
 #' and returns a list with a matrix containing gating results and a vector with 
 #' a label for each cell from a set of specified gates
 #'
-#' @param files       The fcs files of interest
+#' @param files       The FCS files of interest
 #' @param wspFile    The FlowJo wsp file to read
 #' @param group       The FlowJo group to parse. Default "All Samples".
 #' @param cellTypes  Cell types to use for final labeling the cells. Should
 #'                    correspond with a subset of the gate names in FlowJo.
-#' @param getData    If true, flowframes are returned as well.
+#' @param getData    If true, flowFrames are returned as well.
 #' @param ...         Extra arguments to pass to CytoML::flowjo_to_gatingset
 #'
 #' @return This function returns a list, which for every file contains a list
@@ -677,7 +698,7 @@ GetFlowJoLabels <- function(files,
   return(result)
 }
 
-#' Summarise the gating matrix into one vector, only including the cell types of
+#' Summarize the gating matrix into one vector, only including the cell types of
 #' interest
 #'
 #' Extract the compensated and transformed data and all gate labels.
@@ -707,7 +728,7 @@ ManualVector <- function(manualMatrix, cellTypes){
 
 #' GetChannels
 #' 
-#' Get channel names for an array of markers, given a flowframe or a FlowSOM
+#' Get channel names for an array of markers, given a flowFrame or a FlowSOM
 #' object. As available in "name". \code{\link{grep}} is used to look for the 
 #' markers. Other regex can be added.
 #' 
@@ -774,7 +795,7 @@ GetChannels <- function(object, markers, exact = TRUE) {
 
 #' GetMarkers
 #' 
-#' Get marker names for an array of channels, given a flowframe or a FlowSOM 
+#' Get marker names for an array of channels, given a flowFrame or a FlowSOM 
 #' object. As available in "desc". If this is NA, defaults to channel name. 
 #' \code{\link{grep}} is used to look for the markers. Other regex can be added.
 #' 
