@@ -143,6 +143,7 @@ UpdateDerivedValues <- function(fsom){
 #' @param distf Distance function (1 = manhattan, 2 = euclidean, 3 = chebyshev, 
 #'              4 = cosine)
 #' @param silent If FALSE, print status updates
+#' @param map If FALSE, data is not mapped to the SOM. Default TRUE.
 #' @param codes Cluster centers to start with
 #' @param importance array with numeric values. Parameters will be scaled 
 #'                   according to importance
@@ -161,7 +162,7 @@ SOM <- function (data, xdim = 10, ydim = 10, rlen = 10, mst = 1,
                  alpha = c(0.05, 0.01),
                  radius = stats::quantile(nhbrdist, 0.67) * c(1, 0), 
                  init = FALSE, initf = Initialize_KWSP, distf = 2, 
-                 silent = FALSE,
+                 silent = FALSE, map = TRUE,
                  codes = NULL, importance = NULL){
   if (!is.null(codes)){
     if((ncol(codes) != ncol(data)) | (nrow(codes) != xdim * ydim)){
@@ -225,7 +226,12 @@ SOM <- function (data, xdim = 10, ydim = 10, rlen = 10, mst = 1,
   }
   
   if(!silent) message("Mapping data to SOM\n")
-  mapping <- MapDataToCodes(codes, data)
+
+  if (map) {
+    mapping <- MapDataToCodes(codes, data)
+  } else {
+    mapping <- NULL
+  }
   
   return(list(xdim = xdim, ydim = ydim, rlen = rlen, mst = mst, alpha = alpha,
               radius = radius, init = init, distf = distf,
@@ -748,7 +754,7 @@ GetFeatures <- function(fsom,
                       ncol = nmarker * nmetaclus,
                       dimnames = list(filenames,
                                       paste0(rep(paste0("MC", 
-                                                        seq_len(nmetaclus)), 
+                                                        levels(fsom$metaclustering)), 
                                                  each = nmarker), 
                                              " ", fsom$prettyColnames[MFI])))
   }
@@ -770,7 +776,7 @@ GetFeatures <- function(fsom,
                           ncol = nmarker * nmetaclus,
                           dimnames = list(filenames,
                                           paste0(rep(paste0("MC", 
-                                                            seq_len(nmetaclus)), 
+                                                            levels(fsom$metaclustering)), 
                                                      each = nmarker), 
                                                  " ", fsom$prettyColnames[perc_pos])))
   }
