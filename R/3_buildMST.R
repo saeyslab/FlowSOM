@@ -265,10 +265,20 @@ NewData <- function(fsom,
 #'  flowSOM.res <- FlowSOM(ff,
 #'                         compensate = TRUE, transform = TRUE, scale = TRUE,
 #'                         colsToUse = c(9, 12, 14:18),
-#'                         maxMeta = 10)
+#'                         nClus = 10)
 #'    
 #'  # Map new data
-#'  outlier_report <- TestOutliers(flowSOM.res)
+#'  outlier_report <- TestOutliers(flowSOM.res, 
+#'                                 madAllowed = 5,
+#'                                 channels = flowSOM.res$map$colsUsed)
+#' 
+#'  # Number of cells which is an outlier for x channels                               
+#'  outlier_on_multiple_markers <- table(rowSums(outlier_report$channel_specific != 0))          
+#'  outlier_type <- paste(GetClusters(flowSOM.res),
+#'                        apply(outlier_report$channel_specific, 1, paste0, collapse = ""))
+#'  outlier_counts <- table(grep(" .*1.*", outlier_type, value = TRUE))
+#'  outliers_of_interest <- names(which(outlier_counts > 10))
+#'  outlier_boolean <- outlier_type %in% outliers_of_interest
 #'  
 #' @import     ggplot2
 #' @importFrom grDevices pdf dev.off
@@ -287,137 +297,66 @@ TestOutliers <- function(fsom,
   } else {
     fsomReference <- UpdateFlowSOM(fsomReference)
   }
-  distances_median <- sapply(seq_len(fsomReference$map$nNodes), 
-                             function(x) {
-                               ids <- which(GetClusters(fsomReference) == x)
-                               if (length(ids) > 0) {
-                                 m <- stats::median(fsomReference$map$mapping[ids, 
-                                                                              2])
-                               }
-                               else {
-                                 m <- 0
-                               }
-                               return(m)
-                             })
-  distances_mad <- sapply(seq_len(fsomReference$map$nNodes), 
-                          function(x) {
-                            ids <- which(GetClusters(fsomReference) == x)
-                            if (length(ids) > 0) {
-                              m <- stats::mad(fsomReference$map$mapping[ids, 
-                                                                        2])
-                            }
-                            else {
-                              m <- 0
-                            }
-                            return(m)
-                          })
-  thresholds <- distances_median + madAllowed * distances_mad
-  max_distances_new <- sapply(seq_len(fsom$map$nNodes), function(x) {
-    ids <- which(GetClusters(fsom) == x)
-    if (length(ids) > 0) {
-      m <- max(fsom$map$mapping[ids, 2])
-    }
-    else {
-      m <- 0
-    }
-    return(m)
-  })
-  outliers <- sapply(seq_len(fsom$map$nNodes), function(x) {
-    ids <- which(GetClusters(fsom) == x)
-    distances <- fsom$map$mapping[ids, 2]
-    return(sum(distances > thresholds[x]))
-  })
   
+  referenceClusters <- factor(GetClusters(fsomReference), 
+                              levels = seq_len(fsomReference$map$nNodes))
+  clusters <- factor(GetClusters(fsom), 
+                     levels = seq_len(fsom$map$nNodes))
+  
+  # Distance in high-dimensional space
+  medians <- tapply(fsomReference$map$mapping[,2], 
+                    referenceClusters,
+                    stats::median)
+  
+  mads <- tapply(fsomReference$map$mapping[,2], 
+                 referenceClusters,
+                 stats::mad)
+  
+  thresholds <- medians + madAllowed * mads
+  max_distances_new <- tapply(fsom$map$mapping[,2], 
+                             clusters,
+                             max)
+  outliers <- (fsom$map$mapping[,2] > thresholds[clusters])
+  outlier_count <- tapply(outliers, clusters, sum)
   
   if (!is.null(channels)){
     outliers_list <- list()
     for (channel in channels){
-      distances_median_channel <- 
-        sapply(seq_len(fsomReference$map$nNodes), 
-               function(x) {
-                 ids <- which(GetClusters(fsomReference) == x)
-                 if (length(ids) > 0) {
-                   m <- stats::median(abs(fsomReference$data[ids, channel] - 
-                                            fsomReference$map$codes[x, channel]))
-                 }
-                 else {
-                   m <- 0
-                 }
-                 return(m)
-               })
-      distances_mad_channel <- 
-        sapply(seq_len(fsomReference$map$nNodes), 
-               function(x) {
-                 ids <- which(GetClusters(fsomReference) == x)
-                 if (length(ids) > 0) {
-                   m <- stats::mad(abs(fsomReference$data[ids, 
-                                                          channel] - 
-                                         fsomReference$map$codes[x, 
-                                                                 channel]))
-                                        }
-                                        else {
-                                          m <- 0
-                                        }
-                                        return(m)
-                                      })
+      medians_channel <- tapply(fsomReference$data[,channel], 
+                                referenceClusters,
+                                stats::median)
+      mads_channel <- tapply(fsomReference$data[,channel], 
+                             referenceClusters,
+                             stats::mad)
       
-      thresholds_channel <- distances_median_channel + madAllowed * distances_mad_channel
+      max_thresholds_channel <- medians_channel + madAllowed * mads_channel
+      min_thresholds_channel <- medians_channel - madAllowed * mads_channel
+      outliers_channel <- rep(0, nrow(fsom$data))
+      outliers_channel[fsom$data[,channel] > max_thresholds_channel[clusters]] <- 1
+      outliers_channel[fsom$data[,channel] < min_thresholds_channel[clusters]] <- -1
       
-      outliers_channel <- sapply(seq_len(fsom$map$nNodes), function(x) {
-        ids <- which(GetClusters(fsom) == x)
-        distances <- abs(fsom$data[ids,channel] - fsomReference$map$codes[x,
-                                                                          channel])
-        return(sum(distances > thresholds_channel[x]))
-      })
-      
-      
-      outliers_list[[GetMarkers(fsom,channel)]] <- outliers_channel    
+      outliers_list[[GetMarkers(fsom,channel)]] <- outliers_channel
     }
   }
   
   
   if (!is.null(plotFile)) {
-    xdim <- fsom$map$xdim
-    ydim <- fsom$map$ydim
-    graphics::layout(matrix(1:(xdim * ydim), nrow = xdim))
-    plotList <- lapply(seq_len(xdim * ydim), function(i) {
-      ids <- which(GetClusters(fsom) == i)
-      values <- fsom$map$mapping[ids, 2]
-      if (length(values) > 1) {
-        nOutliers <- sum(values > thresholds[i])
-        p <- suppressMessages(ggplot2::ggplot() + 
-                                ggplot2::geom_histogram(ggplot2::aes(values), 
-                                                        fill = "grey90", 
-                                                        col = "black", 
-                                                        size = 0.2) + 
-                                ggplot2::geom_vline(ggplot2::aes(xintercept = distances_median[i]), 
-                                                    col = "black") + 
-                                ggplot2::geom_vline(ggplot2::aes(xintercept = thresholds[i]), 
-                                                    col = "red") + 
-                                ggplot2::ggtitle(paste0(i, 
-                                                        " (", nOutliers, ")")) + 
-                                ggplot2::theme_minimal() + 
-                                ggplot2::theme(axis.title.x = ggplot2::element_blank()) + 
-                                ggplot2::ylab("Frequency"))
-        return(p)
-      }
-    })
-    p <- suppressMessages(ggpubr::ggarrange(plotlist = plotList))
     grDevices::pdf(plotFile, width = 20, height = 20)
-    print(p)
+    print(PlotOutliers(fsom, thresholds))
     grDevices::dev.off()
   }
-  result <- data.frame(Median_distance = distances_median, 
-                       Median_absolute_deviation = distances_mad, 
+  result <- data.frame(Median_distance = medians, 
+                       Median_absolute_deviation = mads, 
                        Threshold = thresholds, 
-                       Number_of_outliers = outliers, 
+                       Number_of_outliers = outlier_count, 
                        Maximum_outlier_distance = max_distances_new)
   
   if (!is.null(channels)){
-    result <- cbind(result, do.call(cbind, outliers_list))
+    result <- list(report = result, 
+                   channel_specific = do.call(cbind, outliers_list))
   }
-  result <- result[outliers > 
-                     0, ][order(outliers[outliers > 0], decreasing = TRUE),]
+  # result <- result[outliers > 
+  #                    0, ][order(outliers[outliers > 0], decreasing = TRUE),]
   return(result)
 }
 
