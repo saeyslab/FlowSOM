@@ -2495,19 +2495,14 @@ FlowSOMmary <- function(fsom, plotFile = "FlowSOMmary.pdf"){
     #----Median expression per metacluster----
     
     message("Plot heatmap")
-    colnames(mfis) <- fsom$prettyColnames[colnames(mfis)]
-    rownames(mfis) <- levels(metaclusters)
-    mfis_scaled <- scale(mfis)
-    mfis_scaled[is.na(mfis_scaled)] <- 0
-    plotList[["empty"]] <- ggplot2::ggplot() + ggplot2::theme_minimal()
-    if (requireNamespace("pheatmap", quietly = TRUE)) {
-      plotList[["p10"]] <-
-        pheatmap::pheatmap(mfis_scaled, scale = "none",
-                           display_numbers = round(mfis, 2),
-                           main = "Median expression per metacluster",
-                           silent = TRUE)
+    
+    if (requireNamespace("ComplexHeatmap", quietly = TRUE)) {
+      plotList[["p10"]] <- PlotMFIHeatmap(fsom, level = "metaclusters",
+                                          cluster_rows = TRUE, 
+                                          cluster_columns = TRUE,
+                                          labels = TRUE)
     } else {
-      message("Please install \"pheatmap\" to add a heatmap to the FlowSOMmary")
+      message("Please install \"ComplexHeatmap\" to add a heatmap to the FlowSOMmary")
     }
   }
   
@@ -2820,4 +2815,306 @@ PlotOutliers <- function(fsom, outlierReport){
   })
   p <- suppressMessages(ggpubr::ggarrange(plotlist = plotList))
   return(p)
+}
+
+
+#' Plot1DScatters
+#' 
+#' Plot an overview of the clusters or metaclusters per marker with all the cells
+#' as reference
+#' 
+#' @param fsom              FlowSOM object, as created by \code{\link{FlowSOM}}
+#' @param channels          Vector in which each element is a channel
+#'                          or a marker 
+#' @param clusters          Vector with indices of clusters of interest
+#' @param metaclusters      Vector with indices of metaclusters of interest
+#' @param maxBgPoints       Maximum number of background cells to plot
+#' @param sizeBgPoints      Size of the background cells
+#' @param colBgPoints       Color of background cells
+#' @param maxPoints         Maximum number of (meta)cluster cells to plot
+#' @param sizePoints        Size of the (meta)cluster cells
+#' @param yLim              Optional vector of a lower and upper limit of the y-axis
+#' @param xLabels           Determines the label of the x-axis. Can be 
+#'                         "marker" and\\or "channel" or abbrevations.
+#'                          Default = "marker".
+#' @param colors            Vector of colors for all the cells in the selected nodes. 
+#'                          First the clusters are colored, then the metaclusters. 
+#'                          If \code{NULL}, the default ggplot colors, are used.
+#' @param plotFile          If a filepath for graphic device is given (default = NULL), 
+#'                          the plots will be plotted in the corresponding file. 
+#'                          If \code{NULL}, a ggplot object will be returned
+#' 
+#' @return Plot
+#' 
+#' @examples
+#' 
+#' # Identify the files
+#' fcs <- flowCore::read.FCS(system.file("extdata", "68983.fcs", 
+#'                                       package = "FlowSOM"))
+#' # Build a FlowSOM object
+#' flowSOM.res <- FlowSOM(fcs, 
+#'                        scale = TRUE,
+#'                        compensate = TRUE, 
+#'                        transform = TRUE,
+#'                        toTransform = 8:18, 
+#'                        colsToUse = c(9, 12, 14:18),
+#'                        nClus = 10,
+#'                        seed = 1)
+#' p <- Plot1DScatters(flowSOM.res, metaclusters = 4, clusters = c(1, 2))                       
+#' 
+#' @import ggplot2 
+#' @importFrom dplyr mutate filter group_by slice_sample bind_rows everything
+#' @importFrom tidyr pivot_longer
+#' @importFrom ggforce position_jitternormal
+#' 
+#' @export
+Plot1DScatters <- function(fsom,
+                           channels = fsom$map$colsUsed,
+                           clusters = NULL,
+                           metaclusters = NULL,
+                           maxBgPoints = 3000,
+                           sizeBgPoints = 0.5,
+                           colBgPoints = "gray",
+                           maxPoints = 1000,
+                           sizePoints = 0.5,
+                           yLim = NULL,
+                           xLabels = c("marker"),
+                           colors = NULL,
+                           plotFile = NULL) {
+  # Initialization
+  fsom <- UpdateFlowSOM(fsom)
+  if (is.null(metaclusters) & is.null(clusters)) stop("Please provide a clusters and/or metaclusters")
+  xLabels <- pmatch(xLabels, c("marker", "channel"))
+  if (any(is.na(xLabels)) | length(xLabels) > 2) {
+    stop("xLabels should be \"marker\" and\\or \"channel\"")
+  } else {
+    xLabels <- c("marker", "channel")[xLabels]
+  }
+  fsom_data <- as.data.frame(fsom$data[, GetChannels(fsom, channels), drop = FALSE])
+  
+  # Parse x labels
+  if ("marker" %in% xLabels && length(xLabels) == 1) {
+    xLabs <- GetMarkers(fsom, channels)
+  } else if ("channel" %in% xLabels && length(xLabels) == 1) {
+    xLabs <- GetChannels(fsom, channels)
+  } else if (all(c("channel", "marker") %in% xLabels) && length(xLabels) == 2) {
+    channels <- GetChannels(fsom, channels)
+    xLabs <- paste0(GetMarkers(fsom, channels), " (", channels, ")")
+  }
+  colnames(fsom_data) <- xLabs
+  
+  # Extract and parse background data
+  channels <- GetChannels(fsom, channels)
+  bgData <- fsom_data %>%
+    dplyr::slice_sample(n = maxBgPoints) %>%
+    tidyr::pivot_longer(dplyr::everything())
+  
+  # Extract and parse metacluster data
+  data_mcl <- fsom_data %>%
+    as.data.frame() %>%
+    dplyr::mutate(col = GetMetaclusters(fsom)) %>%
+    dplyr::filter(.data$col %in% metaclusters) %>%
+    dplyr::group_by(.data$col) %>%
+    dplyr::slice_sample(n = maxPoints) %>%
+    tidyr::pivot_longer(-.data$col) %>%
+    dplyr::mutate(col = factor(.data$col)) %>%
+    dplyr::mutate(level = "mcl") %>%
+    dplyr::mutate(col = paste0("MCL ", .data$col))
+  
+  # Extract and parse cluster data
+  data_cl <- fsom_data %>%
+    as.data.frame() %>%
+    dplyr::mutate(col = GetClusters(fsom)) %>%
+    dplyr::filter(.data$col %in% clusters) %>%
+    dplyr::group_by(.data$col) %>%
+    dplyr::slice_sample(n = min(maxPoints)) %>%
+    tidyr::pivot_longer(-.data$col) %>%
+    dplyr::mutate(col = factor(.data$col)) %>%
+    dplyr::mutate(level = "cl") %>%
+    dplyr::mutate(col = paste0("CL ", .data$col))
+  
+  # Make plot
+  data <- dplyr::bind_rows(data_mcl, data_cl)
+  p <- ggplot2::ggplot() +
+    ggplot2::geom_point(data = bgData, ggplot2::aes(x = .data$name, y = .data$value), 
+                        col = colBgPoints, position = ggforce::position_jitternormal(sd_x = 0.07, sd_y = 0), 
+                        size = sizeBgPoints) +
+    ggplot2::geom_point(data = data, ggplot2::aes(x = .data$name, y = .data$value, col = .data$col), 
+                        position = ggforce::position_jitternormal(sd_x = 0.07, sd_y = 0), 
+                        size = sizePoints) +
+    ggplot2::facet_wrap(~.data$col, ncol = 1, scales = "free") +
+    ggplot2::theme_minimal() +
+    ggplot2::xlab("") +
+    ggplot2::ylab("Fluorescence") +
+    ggplot2::theme(
+      legend.position = "none",
+      axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, vjust = 1)
+    )
+  if (!is.null(colors)) {
+    p <- p + ggplot2::scale_color_manual(values = colors)
+  }
+  if (!is.null(yLim)) {
+    p <- p + ggplot2::ylim(yLim)
+  }
+  
+  # Return or save plot
+  if (!is.null(plotFile)) {
+    ggplot2::ggsave(plotFile,
+                    p,
+                    width = length(channels) * 3,
+                    height = (length(clusters) + length(metaclusters) * 8) + 3,
+                    dpi = 350,
+                    units = "cm"
+    )
+  } else {
+    return(p)
+  }
+}
+
+
+#' PlotMFIHeatmap
+#' 
+#' Plots a heatmap of the cluster medians and metacluster medians
+#' 
+#' @param fsom              FlowSOM object, as created by \code{\link{FlowSOM}}
+#' @param level             A vector with "clusters" and/or "metaclusters (or abbreviations)
+#'                          to show clusters and/or metaclusters. Default shows both.
+#' @param heatmapColors     Vector of colors for the heatmap. The default colors are
+#'                          RdYlBu
+#' @param annotationColors  A color function to color the metacluster column 
+#'                          annotation. The default colors are the ggplot colors
+#' @param cluster_rows      Whether or not to cluster the rows. Default = FALSE
+#' @param cluster_columns   Whether or not to cluster the columns Default = FALSE
+#' @param labels            Whether or not to display the MFIs. Default = FALSE
+#' 
+#' @return Plot
+#' 
+#' @examples
+#' 
+#' # Identify the files
+#' fcs <- flowCore::read.FCS(system.file("extdata", "68983.fcs", 
+#'                                       package = "FlowSOM"))
+#' # Build a FlowSOM object
+#' flowSOM.res <- FlowSOM(fcs, 
+#'                        scale = TRUE,
+#'                        compensate = TRUE, 
+#'                        transform = TRUE,
+#'                        toTransform = 8:18, 
+#'                        colsToUse = c(9, 12, 14:18),
+#'                        nClus = 10,
+#'                        seed = 1)
+#' p <- PlotMFIHeatmap(flowSOM.res)                       
+#' 
+#' 
+#' @export
+PlotMFIHeatmap <- function(fsom, 
+                           level = c("clusters", "metaclusters"),
+                           heatmapColors = c("#313695", "#4575B4", "#74ADD1", "#ABD9E9", "#E0F3F8", "#FEE090", 
+                                             "#FDAE61", "#F46D43", "#D73027", "#A50026"),
+                           annotationColors = gg_color_hue,
+                           cluster_rows = FALSE,
+                           cluster_columns = FALSE,
+                           labels = FALSE){
+  if (requireNamespace("ComplexHeatmap", quietly = TRUE)) {
+    level <- pmatch(level, c("metaclusters", "clusters"))
+    fsom <- UpdateFlowSOM(fsom)
+    if (length(level) > 2 | any(is.na(level))){
+      stop("level should be \"clusters\" or \"metaclusters\"")
+    } else {
+      level <- c("metaclusters", "clusters")[level]
+      
+      c_mfis <- t(scale(GetClusterMFIs(fsom, colsUsed = TRUE, prettyColnames = TRUE)))
+      c_mfis <- c_mfis[, order(fsom$metaclustering)]
+      mc_df <- data.frame(
+        "metaclustering" = factor(x = as.character(sort(fsom$metaclustering)), 
+                                  levels = as.character(levels(fsom$metaclustering))
+        ))
+      colors_m <- annotationColors(NMetaclusters(fsom))
+      names(colors_m) <- unique(mc_df$metaclustering)
+      mc_a <- ComplexHeatmap::HeatmapAnnotation(
+        df = mc_df,
+        col = list("metaclustering" = colors_m), 
+        name = "cl", 
+        border = TRUE, 
+        show_annotation_name = TRUE,
+        annotation_name_side = "left",
+        show_legend = FALSE
+      )
+      counts <- GetCounts(fsom, level = "clusters")[order(fsom$metaclustering)]
+      count_a <- ComplexHeatmap::HeatmapAnnotation(
+        "Counts" = ComplexHeatmap::anno_barplot(counts, 
+                                                add_numbers = TRUE, 
+                                                numbers_rot = 90, 
+                                                height = unit(2, "cm")),
+        show_annotation_name = FALSE,
+        name = "counts")
+      
+      labels_c_fun <- if (labels){
+        function(j, i, x, y, w, h, col) {
+          grid::grid.text(round(t(GetClusterMFIs(fsom, colsUsed = TRUE, prettyColnames = TRUE))[i, j], 2), x, y)
+        }
+      } else {NULL}
+      
+      c_hm <- ComplexHeatmap::Heatmap(c_mfis,
+                                      col = heatmapColors,
+                                      cluster_rows = cluster_rows, 
+                                      cluster_columns = cluster_columns, 
+                                      column_split = mc_df$metaclustering,
+                                      show_column_names = TRUE,
+                                      row_names_side = "left",
+                                      bottom_annotation = mc_a, 
+                                      top_annotation = count_a,
+                                      name = "cluster_hm",
+                                      border = TRUE,
+                                      show_heatmap_legend = ifelse(length(level) == 2, FALSE, TRUE),
+                                      cell_fun = labels_c_fun)
+      
+      
+      mc_mfis <- t(scale(GetMetaclusterMFIs(fsom, 
+                                            colsUsed = TRUE, 
+                                            prettyColnames = TRUE)))
+      
+      mc_df2 <- data.frame(
+        "metaclustering" = factor(as.character(colnames(mc_mfis)),
+                                  levels = as.character(colnames(mc_mfis))))
+      mc_a2 <- ComplexHeatmap::HeatmapAnnotation(df = mc_df2,
+                                                 col = list(
+                                                   "metaclustering" = colors_m),
+                                                 name = "mcl",
+                                                 border = TRUE, 
+                                                 show_legend = FALSE)
+      
+      labels_mc_fun <- if (labels){
+        function(j, i, x, y, w, h, col) { 
+          grid::grid.text(round(t(GetMetaclusterMFIs(fsom, colsUsed = TRUE, prettyColnames = TRUE))[i, j], 2), x, y)}
+      } else {NULL}
+      
+      mc_hm <- ComplexHeatmap::Heatmap(mc_mfis,
+                                       col = heatmapColors,
+                                       cluster_rows = cluster_rows, 
+                                       cluster_columns = cluster_columns, 
+                                       show_column_names = TRUE,
+                                       bottom_annotation = mc_a2,
+                                       column_names_side = "top",
+                                       name = "metacluster_hm", 
+                                       border = TRUE,
+                                       heatmap_legend_param = list(
+                                         title = "", 
+                                         legend_height = unit(6, "cm"), 
+                                         border = "black"),
+                                       cell_fun = labels_mc_fun)
+      if (length(level) == 2){
+        hm_list <- c_hm + mc_hm
+      } else {
+        if (level == "metaclusters"){
+          hm_list <- mc_hm
+        } else {
+          hm_list <- c_hm
+        }
+      }
+      return(hm_list)
+    }
+  } else {
+    message("Please install \"ComplexHeatmap\" to add a heatmap to the FlowSOMmary")
+  }
 }

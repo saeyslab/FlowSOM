@@ -334,7 +334,7 @@ cellTypes[query_res$selected] <- "CD8 T cells"
 
 <<fig=TRUE>>=
 p <- PlotStars(fSOM, backgroundValues=cellTypes, 
-               backgroundColor=c("#FFFFFF00","#0000FF"))
+               backgroundColors=c("#FFFFFF00","#0000FF"))
 print(p, newpage = FALSE)
 @
 
