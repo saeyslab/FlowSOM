@@ -2837,6 +2837,7 @@ PlotOutliers <- function(fsom, outlierReport){
 #' @param xLabels           Determines the label of the x-axis. Can be 
 #'                         "marker" and\\or "channel" or abbrevations.
 #'                          Default = "marker".
+#' @param centers           Add cluster centers to plot. Default = FALSE.
 #' @param colors            Vector of colors for all the cells in the selected nodes. 
 #'                          First the clusters are colored, then the metaclusters. 
 #'                          If \code{NULL}, the default ggplot colors, are used.
@@ -2863,7 +2864,7 @@ PlotOutliers <- function(fsom, outlierReport){
 #' p <- Plot1DScatters(flowSOM.res, metaclusters = 4, clusters = c(1, 2))                       
 #' 
 #' @import ggplot2 
-#' @importFrom dplyr mutate filter group_by slice_sample bind_rows everything
+#' @importFrom dplyr mutate filter group_by slice_sample bind_rows everything reframe
 #' @importFrom tidyr pivot_longer
 #' @importFrom ggforce position_jitternormal
 #' 
@@ -2879,6 +2880,7 @@ Plot1DScatters <- function(fsom,
                            sizePoints = 0.5,
                            yLim = NULL,
                            xLabels = c("marker"),
+                           centers = FALSE,
                            colors = NULL,
                            plotFile = NULL) {
   # Initialization
@@ -2917,9 +2919,8 @@ Plot1DScatters <- function(fsom,
     dplyr::group_by(.data$col) %>%
     dplyr::slice_sample(n = maxPoints) %>%
     tidyr::pivot_longer(-.data$col) %>%
-    dplyr::mutate(col = factor(.data$col)) %>%
-    dplyr::mutate(level = "mcl") %>%
-    dplyr::mutate(col = paste0("MCL ", .data$col))
+    dplyr::mutate(col = factor(paste0("Metacluster: ", .data$col)))
+  
   
   # Extract and parse cluster data
   data_cl <- fsom_data %>%
@@ -2929,9 +2930,8 @@ Plot1DScatters <- function(fsom,
     dplyr::group_by(.data$col) %>%
     dplyr::slice_sample(n = min(maxPoints)) %>%
     tidyr::pivot_longer(-.data$col) %>%
-    dplyr::mutate(col = factor(.data$col)) %>%
-    dplyr::mutate(level = "cl") %>%
-    dplyr::mutate(col = paste0("CL ", .data$col))
+    dplyr::mutate(col = factor(paste0("Cluster: ", .data$col)))
+  
   
   # Make plot
   data <- dplyr::bind_rows(data_mcl, data_cl)
@@ -2950,13 +2950,47 @@ Plot1DScatters <- function(fsom,
       legend.position = "none",
       axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, vjust = 1)
     )
+  
+  # Custom colors
   if (!is.null(colors)) {
     p <- p + ggplot2::scale_color_manual(values = colors)
   }
+  
+  # Custom limits
   if (!is.null(yLim)) {
     p <- p + ggplot2::ylim(yLim)
   }
   
+  # Add cluster and metacluster centers
+  if (centers){
+    data_mcl_centers <- fsom_data %>%
+      as.data.frame() %>%
+      dplyr::mutate(mcl = GetMetaclusters(fsom)) %>%
+      dplyr::mutate(cl = GetClusters(fsom)) %>% 
+      dplyr::filter(.data$mcl %in% metaclusters) %>% 
+      tidyr::pivot_longer(-c(.data$mcl, .data$cl)) %>% 
+      dplyr::group_by(.data$mcl, .data$cl, .data$name) %>% 
+      dplyr::reframe(mean = mean(.data$value)) %>% 
+      dplyr::mutate(col = factor(paste0("Metacluster: ", .data$mcl))) %>% 
+      dplyr::select(-.data$cl, -.data$mcl)
+    
+    data_cl_centers <- data_cl %>% 
+      dplyr::group_by(.data$name, .data$col) %>% 
+      dplyr::reframe(mean = mean(.data$value))
+    
+    data_c <- dplyr::bind_rows(data_mcl_centers, data_cl_centers)
+    p <-  p + ggplot2::geom_point(data = data_c, 
+                                  shape = 21, 
+                                  ggplot2::aes(x = .data$name, y = .data$mean, fill = .data$col), 
+                                  color = "black", 
+                                  position = ggforce::position_jitternormal(sd_x = 0.07, sd_y = 0), 
+                                  size = 3,
+                                  stroke = 1) 
+    if (!is.null(colors)) {
+      p <- p + ggplot2::scale_fill_manual(values = colors)
+    }
+    
+  }
   # Return or save plot
   if (!is.null(plotFile)) {
     ggplot2::ggsave(plotFile,
@@ -3118,3 +3152,4 @@ PlotMFIHeatmap <- function(fsom,
     message("Please install \"ComplexHeatmap\" to add a heatmap to the FlowSOMmary")
   }
 }
+

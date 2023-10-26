@@ -16,6 +16,7 @@ Plot1DScatters(
   sizePoints = 0.5,
   yLim = NULL,
   xLabels = c("marker"),
+  centers = FALSE,
   colors = NULL,
   plotFile = NULL
 )
@@ -45,6 +46,8 @@ or a marker}
 \item{xLabels}{Determines the label of the x-axis. Can be 
 "marker" and\\or "channel" or abbrevations.
  Default = "marker".}
+
+\item{centers}{Add cluster centers to plot. Default = FALSE.}
 
 \item{colors}{Vector of colors for all the cells in the selected nodes. 
 First the clusters are colored, then the metaclusters. 

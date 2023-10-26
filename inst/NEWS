@@ -1,8 +1,9 @@
-CHANGES IN VERSION 2.9.4 (2023/10/18)
+CHANGES IN VERSION 2.9.4 (2023/10/26)
 --------------------------------------
 o Added Plot1DScatters
 o Added PlotMFIHeatmap
 o Changed default heatmap in the FlowSOMmary to PlotMFIHeatmap
+o Added cluster centers to Plot1DScatters
 
 CHANGES IN VERSION 2.9.3 (2023/10/13)
 --------------------------------------
