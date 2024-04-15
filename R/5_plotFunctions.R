@@ -2401,16 +2401,23 @@ FlowSOMmary <- function(fsom, plotFile = "FlowSOMmary.pdf"){
                 title = paste0("FlowSOM ", view))
     
     if (metaclustersPresent){
+      
+      if(is.character(is.numeric(fsom$metaclustering)) == as.charachter(fsom$metaclustering)){
+        values_to_annotate <- fsom$metaclustering 
+      else {
+        values_to_annotate <- paste(as.numeric(fsom$metaclustering), ": ", fsom$metaclustering) 
+      } 
+      
       p2.1 <- PlotFlowSOM(fsom, view = view, title = "FlowSOM Clusters",
                           equalNodeSize = TRUE) %>% 
-        AddNodes(values = fsom$metaclustering, 
+        AddNodes(values = values_to_annotate, 
                  showLegend = TRUE,
                  label = "Metaclusters") %>% 
         AddLabels(labels = seq_len(NClusters(fsom)))
       
       p2.2 <- PlotFlowSOM(fsom, view = view, equalNodeSize = TRUE,
                           title = "FlowSOM Metaclusters") %>% 
-        AddNodes(values = fsom$metaclustering, showLegend = TRUE,
+        AddNodes(values = values_to_annotate, showLegend = TRUE,
                  label = "Metaclusters") %>% 
         AddLabels(labels = as.numeric(fsom$metaclustering))
       

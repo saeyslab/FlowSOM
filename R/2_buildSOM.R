@@ -787,9 +787,9 @@ GetFeatures <- function(fsom,
     if (isFALSE(silent)){
       message(paste0("Mapping file ", i, " of ", nfiles, "."))
     }
-    fsom_tmp <- suppressWarnings(NewData(fsom = fsom,
-                                         input = file,
-                                         silent = silent))
+    fsom_tmp <- NewData(fsom = fsom,
+                        input = file,
+                        silent = silent)
     
     counts_t <- table(GetClusters(fsom_tmp))
     C_counts[i, paste0("C", names(counts_t))] <- counts_t
@@ -819,6 +819,9 @@ GetFeatures <- function(fsom,
   }
   
   #----Add matrices to list----
+  
+  matrices[["outliers"]] <- C_outliers
+  
   if ("clusters" %in% level){
     if ("counts" %in% type){
       C_counts_tmp <- C_counts
