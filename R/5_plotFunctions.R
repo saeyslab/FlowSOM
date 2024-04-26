@@ -2402,7 +2402,7 @@ FlowSOMmary <- function(fsom, plotFile = "FlowSOMmary.pdf"){
     
     if (metaclustersPresent){
       
-      if(is.character(is.numeric(fsom$metaclustering)) == as.charachter(fsom$metaclustering)){
+      if(all(as.character(as.numeric(fsom$metaclustering)) == as.character(fsom$metaclustering))){
         values_to_annotate <- fsom$metaclustering 
       } else {
         values_to_annotate <- paste(as.numeric(fsom$metaclustering), ": ", fsom$metaclustering) 
