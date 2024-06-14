@@ -2084,6 +2084,7 @@ AddNodes <- function(p,
 #' @param backgroundLim     Background limits (can be used to ensure consistent
 #'                          Color palette between plots). If NULL (default), will
 #'                          be automatically adapted to the data.
+#' @param alpha             Transparency of the backgroundColor.
 #'                          
 #'                          
 #' @return Returns nothing, but plots the background
@@ -2100,7 +2101,8 @@ AddNodes <- function(p,
 AddBackground <- function(p,
                           backgroundValues, 
                           backgroundColors = NULL, 
-                          backgroundLim = NULL){
+                          backgroundLim = NULL,
+                          alpha = 0.4){
   requireNamespace("ggplot2")
   
   if(is.character(backgroundValues)) {
@@ -2117,7 +2119,7 @@ AddBackground <- function(p,
                                              r =  .data$bg_size,
                                              fill = backgroundValues),
                                 col = NA, 
-                                alpha = 0.4)
+                                alpha = alpha)
   
   return(p)
 }

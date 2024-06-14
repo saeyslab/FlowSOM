@@ -8,7 +8,8 @@ AddBackground(
   p,
   backgroundValues,
   backgroundColors = NULL,
-  backgroundLim = NULL
+  backgroundLim = NULL,
+  alpha = 0.4
 )
 }
 \arguments{
@@ -24,6 +25,8 @@ colors.}
 \item{backgroundLim}{Background limits (can be used to ensure consistent
 Color palette between plots). If NULL (default), will
 be automatically adapted to the data.}
+
+\item{alpha}{Transparency of the backgroundColor.}
 }
 \value{
 Returns nothing, but plots the background
