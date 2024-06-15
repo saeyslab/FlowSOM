@@ -16,6 +16,7 @@ PlotFlowSOM(
   backgroundSize = 1.5,
   equalBackgroundSize = FALSE,
   backgroundLim = NULL,
+  alpha = 0.4,
   title = NULL
 )
 }
@@ -55,6 +56,8 @@ size of the nodes.}
 
 \item{backgroundLim}{Only used when backgroundValues are numerical. 
 Defaults to min and max of the backgroundValues.}
+
+\item{alpha}{Transparency of the backgroundColor.}
 
 \item{title}{Title of the plot}
 }

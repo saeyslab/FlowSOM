@@ -32,6 +32,7 @@
 #' @param equalBackgroundSize If you want the background sizes to be the same size.
 #' @param backgroundLim     Only used when backgroundValues are numerical. 
 #'                          Defaults to min and max of the backgroundValues.
+#' @param alpha             Transparency of the backgroundColor.
 #' @param title             Title of the plot
 #'                          
 #' @return A ggplot object with the base layer of a FlowSOM plot
@@ -75,6 +76,7 @@ PlotFlowSOM <- function(fsom,
                         backgroundSize = 1.5,
                         equalBackgroundSize = FALSE,
                         backgroundLim = NULL,
+                        alpha = 0.4,
                         title = NULL)
 {
   #----Initialization----
@@ -139,7 +141,8 @@ PlotFlowSOM <- function(fsom,
     p <- AddBackground(p,
                        backgroundValues = backgroundValues, 
                        backgroundColors = backgroundColors,
-                       backgroundLim = backgroundLim)
+                       backgroundLim = backgroundLim,
+                       alpha = alpha)
   }
   
   # Add MST
