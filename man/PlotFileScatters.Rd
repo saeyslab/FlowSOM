@@ -80,7 +80,7 @@ a new file. Default = FALSE.}
 \item{plotFile}{Path to png file, default is "FileScatters.png". If 
 \code{NULL}, the output will be a list of ggplots}
 
-\item{...}{Parameters for read.FCS (e.g. truncate_max_range)}
+\item{...}{Arguments for read.FCS (e.g. truncate_max_range)}
 }
 \value{
 List of ggplot objects if \code{plot} is \code{FALSE}, 
