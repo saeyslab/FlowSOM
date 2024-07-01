@@ -1,3 +1,7 @@
+CHANGES IN VERSION 2.13.8 (2024/07/01)
+--------------------------------------
+o Added ToScale option to readInput
+
 CHANGES IN VERSION 2.13.7 (2024/07/01)
 --------------------------------------
 o Replaced geom_text with annotate in FlowSOMmary

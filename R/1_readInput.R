@@ -21,6 +21,9 @@
 #' @param scale         logical, does the data needs to be rescaled
 #' @param scaled.center see \code{\link{scale}}
 #' @param scaled.scale  see \code{\link{scale}}
+#' @param toScale       column names or indices that need to be scaled
+#'                      If \code{NULL} and scale = \code{TRUE}, all columns will 
+#'                      be scaled.
 #' @param silent        if \code{TRUE}, no progress updates will be printed. 
 #'                      Default = \code{FALSE}
 #' @param ...           Additional arguments for read.FCS function
@@ -64,6 +67,7 @@ ReadInput <- function(input, pattern = ".fcs",
                       transformFunction = flowCore::logicleTransform(),
                       transformList = NULL,
                       scale = FALSE, 
+                      toScale = NULL,
                       scaled.center = TRUE, 
                       scaled.scale = TRUE, 
                       silent = FALSE,
@@ -140,7 +144,14 @@ ReadInput <- function(input, pattern = ".fcs",
       fsom$scaled.center <- attr(sc, "scaled:center")
       fsom$scaled.scale <- attr(sc, "scaled:scale")
     } else {
-      fsom$data <- scale(x = fsom$data, center = TRUE, scale = TRUE)
+      
+      if (!is.null(toScale)){
+        cols_to_scale <- toScale
+      } else{
+        cols_to_scale <- colnames(fsom$data)
+      }
+      fsom$data[,cols_to_scale] <- scale(x = fsom$data[,cols_to_scale], 
+                                         center = TRUE, scale = TRUE)
       
       fsom$scaled.center <- attr(fsom$data, "scaled:center")
       attr(fsom$data, "scaled:center") <- NULL
