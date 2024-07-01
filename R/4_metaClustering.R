@@ -540,16 +540,16 @@ GetMajorityLabels <- function(fsom,
                    "C" = FlowSOM::GetClusters(fsom),
                    "cellLabels" = labels)
   MCLabels <- df %>%
-    dplyr::group_by(MC) %>%
-    dplyr::count(cellLabels) %>%
-    dplyr::slice(which.max(n)) %>% 
-    dplyr::select(-n)
+    dplyr::group_by(.data$MC) %>%
+    dplyr::count(.data$cellLabels) %>%
+    dplyr::slice(which.max(.data$n)) %>% 
+    dplyr::select(-.data$n)
   
   CLabels <- df %>%
-    dplyr::group_by(C) %>%
-    dplyr::count(cellLabels) %>%
-    dplyr::slice(which.max(n)) %>% 
-    dplyr::select(-n)
+    dplyr::group_by(.data$C) %>%
+    dplyr::count(.data$cellLabels) %>%
+    dplyr::slice(which.max(.data$n)) %>% 
+    dplyr::select(-.data$n)
   
   return(list("metaclusterLabels" = MCLabels$cellLabels,
               "clusterLabels" = CLabels$cellLabels))
