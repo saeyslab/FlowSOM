@@ -2462,8 +2462,7 @@ FlowSOMmary <- function(fsom, plotFile = "FlowSOMmary.pdf"){
     arcsDf$Markers <- factor(arcsDf$Markers, levels = filesI)
     plotList[["p6"]] <- AddStarsPies(p6, arcsDf, colorPalette = FlowSOM_colors(
       length(filesI) + 1), showLegend = FALSE) +
-      ggplot2::geom_text(ggplot2::aes(x = 0, y = -1, 
-                                      label = "Expected distribution"))
+      ggplot2::annotate("text", x = 0, y = -1, label = "Expected distribution")
   }
   
   #----t-SNE----
