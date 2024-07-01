@@ -1,3 +1,7 @@
+CHANGES IN VERSION 2.13.6 (2024/07/01)
+--------------------------------------
+o Added (...) parameter to readInput to give to read.FCS
+
 CHANGES IN VERSION 2.13.5 (2024/07/01)
 --------------------------------------
 o .data$ added to MajorityLabels function

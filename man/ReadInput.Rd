@@ -16,7 +16,8 @@ ReadInput(
   scale = FALSE,
   scaled.center = TRUE,
   scaled.scale = TRUE,
-  silent = FALSE
+  silent = FALSE,
+  ...
 )
 }
 \arguments{
@@ -51,6 +52,8 @@ of \code{$SPILL} description in FCS file will be used.}
 
 \item{silent}{if \code{TRUE}, no progress updates will be printed. 
 Default = \code{FALSE}}
+
+\item{...}{Additional arguments for read.FCS function}
 }
 \value{
 FlowSOM object containing the data, which can be used as input

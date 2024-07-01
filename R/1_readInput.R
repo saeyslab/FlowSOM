@@ -23,6 +23,7 @@
 #' @param scaled.scale  see \code{\link{scale}}
 #' @param silent        if \code{TRUE}, no progress updates will be printed. 
 #'                      Default = \code{FALSE}
+#' @param ...           Additional arguments for read.FCS function
 #'
 #' @return FlowSOM object containing the data, which can be used as input
 #' for the BuildSOM function
@@ -65,7 +66,8 @@ ReadInput <- function(input, pattern = ".fcs",
                       scale = FALSE, 
                       scaled.center = TRUE, 
                       scaled.scale = TRUE, 
-                      silent = FALSE){
+                      silent = FALSE,
+                      ...){
   
   fsom <- list(pattern = pattern, 
                compensate = compensate, 
@@ -113,7 +115,7 @@ ReadInput <- function(input, pattern = ".fcs",
             flowFrame <- flowFrame(utils::read.table(input[i]))
           } else { #else if(tools::file_ext(input[i]) == "fcs"){
             flowFrame <- suppressWarnings(
-              flowCore::read.FCS(input[i]))
+              flowCore::read.FCS(input[i], ...))
           }
           fsom <- AddFlowFrame(fsom, flowFrame)
         }
