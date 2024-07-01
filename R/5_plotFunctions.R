@@ -696,7 +696,7 @@ PlotVariable <- function(fsom,
 #'                        that the dimred corresponds to subsampling the
 #'                        flowSOM data for cTotal cells with the same seed).
 #' @param extractLayout   A function to extract the coordinates from the results
-#'                        of the dimred default = function(dimred){dimred$Y}.
+#'                        of the dimred default = \code{function(dimred){dimred$Y}}.
 #' @param label           If label = TRUE (default), labels are added to plot.
 #' @param returnLayout    If TRUE, this function returns a dataframe with 
 #'                        the layout of dimred and the original IDs and the 

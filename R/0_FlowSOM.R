@@ -401,7 +401,7 @@ AggregateFlowFrames <- function(fileNames,
 #'  
 #' @param  plotFile   Path to png file, default is "FileScatters.png". If 
 #'                    \code{NULL}, the output will be a list of ggplots 
-#' @param ...         Parameters for read.FCS (e.g. truncate_max_range)
+#' @param ...         Arguments for read.FCS (e.g. truncate_max_range)
 #' 
 #' @return List of ggplot objects if \code{plot} is \code{FALSE}, 
 #'         otherwise \code{filePlot} with plot is created.

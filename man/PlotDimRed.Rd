@@ -52,7 +52,7 @@ that the dimred corresponds to subsampling the
 flowSOM data for cTotal cells with the same seed).}
 
 \item{extractLayout}{A function to extract the coordinates from the results
-of the dimred default = function(dimred){dimred$Y}.}
+of the dimred default = \code{function(dimred){dimred$Y}}.}
 
 \item{label}{If label = TRUE (default), labels are added to plot.}
 
