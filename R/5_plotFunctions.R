@@ -124,7 +124,7 @@ PlotFlowSOM <- function(fsom,
   if (any(isEmpty)) {scaledNodeSize[isEmpty] <- min(maxNodeSize, 0.05)}
   
   #----ggplot----
-  if (equalBackgroundSize){
+  if (equalBackgroundSize | equalNodeSize){
     backgroundSize <- rep(maxNodeSize, nNodes) * backgroundSize
   } else {
     backgroundSize <- ParseNodeSize(nodeSizes, maxNodeSize, refNodeSize) * backgroundSize
