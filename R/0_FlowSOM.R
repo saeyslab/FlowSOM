@@ -401,6 +401,7 @@ AggregateFlowFrames <- function(fileNames,
 #'  
 #' @param  plotFile   Path to png file, default is "FileScatters.png". If 
 #'                    \code{NULL}, the output will be a list of ggplots 
+#' @param ...         Parameters for read.FCS (e.g. truncate_max_range)
 #' 
 #' @return List of ggplot objects if \code{plot} is \code{FALSE}, 
 #'         otherwise \code{filePlot} with plot is created.
@@ -449,7 +450,8 @@ PlotFileScatters <- function(input,
                              width = NULL,
                              height = NULL,
                              silent = FALSE,
-                             plotFile = "FileScatters.png"){
+                             plotFile = "FileScatters.png",
+                             ...){
   
   #----Warnings----
   if (!is.null(color) & !is.null(groups) & 
@@ -481,7 +483,7 @@ PlotFileScatters <- function(input,
     file_values <- data[, fileID]
     input <- unique(file_values)
   } else {
-    channels <- GetChannels(read.FCS(input[1]), channels)
+    channels <- GetChannels(read.FCS(input[1], ...), channels)
     ff <- AggregateFlowFrames(input,
                               cTotal = maxPoints, 
                               channels = channels,
