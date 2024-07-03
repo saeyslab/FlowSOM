@@ -1,3 +1,7 @@
+CHANGES IN VERSION 2.13.9 (2024/07/03)
+--------------------------------------
+o Added Plot1DScatters function
+
 CHANGES IN VERSION 2.13.8 (2024/07/01)
 --------------------------------------
 o Added ToScale option to readInput
