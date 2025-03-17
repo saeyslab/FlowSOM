@@ -2617,6 +2617,9 @@ FlowSOMmary <- function(fsom, plotFile = "FlowSOMmary.pdf"){
   if (!is.null(plotFile)){
     grDevices::pdf(plotFile, width = 17, height = 10)
     print(t1)
+    for (plot in plotList){
+      print(plot)
+    }
     if (metaclustersPresent){
       for (table2 in split_datatable2) {
         print(ggpubr::ggtexttable(table2, theme = ggpubr::ttheme("minimal"), 
@@ -2626,9 +2629,6 @@ FlowSOMmary <- function(fsom, plotFile = "FlowSOMmary.pdf"){
     for (table3 in split_datatable3){
       print(ggpubr::ggtexttable(table3, theme = ggpubr::ttheme("minimal"), 
                                 rows = NULL))
-    }
-    for (plot in plotList){
-      print(plot)
     }
     dev.off()
   } else {

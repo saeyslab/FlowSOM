@@ -1,3 +1,7 @@
+CHANGES IN VERSION 2.13.7 (2025/03/17)
+--------------------------------------
+o Moved table overviews in FlowSOMmary to the end
+
 CHANGES IN VERSION 2.13.6 (2024/07/01)
 --------------------------------------
 o Added (...) parameter to readInput to give to read.FCS
