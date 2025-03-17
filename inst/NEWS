@@ -1,6 +1,18 @@
-CHANGES IN VERSION 2.13.7 (2025/03/17)
+CHANGES IN VERSION 2.13.10 (2025/03/17)
 --------------------------------------
 o Moved table overviews in FlowSOMmary to the end
+
+CHANGES IN VERSION 2.13.9 (2024/07/03)
+--------------------------------------
+o Added Plot1DScatters function
+
+CHANGES IN VERSION 2.13.8 (2024/07/01)
+--------------------------------------
+o Added ToScale option to readInput
+
+CHANGES IN VERSION 2.13.7 (2024/07/01)
+--------------------------------------
+o Replaced geom_text with annotate in FlowSOMmary
 
 CHANGES IN VERSION 2.13.6 (2024/07/01)
 --------------------------------------

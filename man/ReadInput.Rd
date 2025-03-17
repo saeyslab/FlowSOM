@@ -14,6 +14,7 @@ ReadInput(
   transformFunction = flowCore::logicleTransform(),
   transformList = NULL,
   scale = FALSE,
+  toScale = NULL,
   scaled.center = TRUE,
   scaled.scale = TRUE,
   silent = FALSE,
@@ -45,6 +46,10 @@ of \code{$SPILL} description in FCS file will be used.}
 \item{transformList}{transformList to apply on the samples.}
 
 \item{scale}{logical, does the data needs to be rescaled}
+
+\item{toScale}{column names or indices that need to be scaled
+If \code{NULL} and scale = \code{TRUE}, all columns will 
+be scaled.}
 
 \item{scaled.center}{see \code{\link{scale}}}
 
