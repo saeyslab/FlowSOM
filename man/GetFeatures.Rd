@@ -12,7 +12,8 @@ GetFeatures(
   MFI = NULL,
   positive_cutoffs = NULL,
   filenames = NULL,
-  silent = FALSE
+  silent = FALSE,
+  ...
 )
 }
 \arguments{
@@ -43,6 +44,8 @@ either the paths will be used or a numerical vector.}
 
 \item{silent}{Logical. If \code{TRUE}, print progress messages.
 Default = \code{FALSE}.}
+
+\item{...}{Additional arguments to pass to \code{\link{NewData}}}
 }
 \value{
 matrix with features per population - type combination

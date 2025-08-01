@@ -1,3 +1,8 @@
+CHANGES IN VERSION 2.13.11 (2025/08/01)
+--------------------------------------
+o Added NewData parameter options to GetFeatures
+o Added warnings to NewData
+
 CHANGES IN VERSION 2.13.10 (2025/03/17)
 --------------------------------------
 o Moved table overviews in FlowSOMmary to the end

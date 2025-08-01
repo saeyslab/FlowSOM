@@ -639,6 +639,7 @@ GetClusterCVs <- function(fsom){
 #'                          either the paths will be used or a numerical vector.
 #' @param  silent           Logical. If \code{TRUE}, print progress messages.
 #'                          Default = \code{FALSE}.
+#' @param ...               Additional arguments to pass to \code{\link{NewData}}
 #' 
 #' @return matrix with features per population - type combination
 #'         
@@ -685,7 +686,8 @@ GetFeatures <- function(fsom,
                         MFI = NULL, 
                         positive_cutoffs = NULL,
                         filenames = NULL, 
-                        silent = FALSE) {
+                        silent = FALSE,
+                        ...) {
   nclus <- NClusters(fsom)
   nfiles <- length(files)
   i <- 0
@@ -789,7 +791,8 @@ GetFeatures <- function(fsom,
     }
     fsom_tmp <- NewData(fsom = fsom,
                         input = file,
-                        silent = silent)
+                        silent = silent,
+                        ...)
     
     counts_t <- table(GetClusters(fsom_tmp))
     C_counts[i, paste0("C", names(counts_t))] <- counts_t
