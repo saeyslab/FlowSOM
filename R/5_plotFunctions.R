@@ -1085,8 +1085,10 @@ PlotManualBars <- function(fsom, fcs = NULL,
 #'                          or marker names
 #' @param clusters          Vector or list (to combine multiple clusters in one
 #'                          plot) with indices of clusters of interest
-#' @param metaclusters      Character vector or list (to combine multiple metaclusters in 
-#'                          one plot) with metaclusters of interest
+#' @param metaclusters      Vector or list (to combine multiple metaclusters in 
+#'                          one plot) with metaclusters of interest. Can be either
+#'                          a character vector with metacluster names or a
+#'                          vector with metacluster indices.
 #' @param maxBgPoints       Maximum number of background cells to plot
 #' @param sizeBgPoints      Size of the background cells
 #' @param maxPoints         Maximum number of (meta)cluster cells to plot
@@ -1200,7 +1202,7 @@ Plot2DScatters <- function(fsom,
     density <- FALSE
   }
   if (!is.null(metaclusters) &
-      !all(unlist(metaclusters) %in% metacluster_labels)){
+      !all(as.character(unlist(metaclusters)) %in% metacluster_labels)){
     message("Some metaclusters not found in the FlowSOM object.")
   }
   
@@ -1212,6 +1214,9 @@ Plot2DScatters <- function(fsom,
                   "Metacluster" = as.list(metaclusters)) 
   plots_list <- list()
   color_n <- 0
+  
+  metacluster_colors <- gg_color_hue(nMetaclusters)
+  names(metacluster_colors) <- metacluster_labels
   
   if (any(is.na(xyLabels)) | length(xyLabels) > 2){
     stop("xyLabels should be \"marker\" and\\or \"channel\"")
@@ -1246,6 +1251,7 @@ Plot2DScatters <- function(fsom,
                                           c(channelpair[1], channelpair[2]),
                                           drop = FALSE],
                              "Population" = factor(n, levels = n))
+          
           col <- gg_color_hue(nMetaclusters)[metacluster_id[n]]
         } else {
           cells_idx <- metacluster_factor[cellCluster] %in% n
@@ -1260,8 +1266,6 @@ Plot2DScatters <- function(fsom,
             "Population" = droplevels(metacluster_factor[clusters_idx])
           )
           
-          metacluster_colors <- gg_color_hue(nMetaclusters)
-          names(metacluster_colors) <- levels(metacluster_factor)
           col <- metacluster_colors[n]
         }
         df_ss <- data.frame(df_ss[sample(nrow(df_ss), 
@@ -1380,7 +1384,9 @@ Plot2DScatters <- function(fsom,
 #' @param channels          Vector in which each element is a channel
 #'                          or a marker 
 #' @param clusters          Vector with indices of clusters of interest
-#' @param metaclusters      Vector with indices of metaclusters of interest
+#' @param metaclusters      Vector with metaclusters of interest. Can be either
+#'                          a character vector with metacluster names or a vector
+#'                          with metacluster indices.
 #' @param maxBgPoints       Maximum number of background cells to plot
 #' @param sizeBgPoints      Size of the background cells
 #' @param colBgPoints       Color of background cells
@@ -1463,12 +1469,17 @@ Plot1DScatters <- function(fsom,
   
   
   
-  if(!is.null(fsom$metaclustering)){
-    metacluster <- as.numeric(fsom$metaclustering)
+  if (!is.null(fsom$metaclustering)) {
+    
+    metacluster_factor <- factor(fsom$metaclustering)   
+    metacluster_id     <- as.integer(metacluster_factor) 
+    metacluster_labels <- levels(metacluster_factor)
     nMetaclusters <- NMetaclusters(fsom)
   } else {
-    metacluster <- rep(1, NClusters(fsom))
-    nMetaclusters <- 1
+    metacluster_factor <- factor(rep("1", NClusters(fsom)))
+    metacluster_id     <- rep(1L, NClusters(fsom))
+    metacluster_labels <- "1"
+    nMetaclusters      <- 1
   }
   
   medianValues <- fsom$map$medianValues
@@ -1486,6 +1497,10 @@ Plot1DScatters <- function(fsom,
   } else {
     xLabels <- c("marker", "channel")[xLabels]
   }
+  if (!is.null(metaclusters) &
+      !all(as.character(unlist(metaclusters)) %in% metacluster_labels)){
+    message("Some metaclusters not found in the FlowSOM object.")
+  }
   
   #---- Join the clusters and metaclusters of interest ----
   i <- sample(nrow(fsom$data), 
@@ -1496,12 +1511,21 @@ Plot1DScatters <- function(fsom,
   plots_list <- list()
   color_n <- 0
   
+  metacluster_colors <- gg_color_hue(nMetaclusters)
+  names(metacluster_colors) <- metacluster_labels
+  
   for (group in names(subsets)){
     for (subset in subsets[[group]]){
       color_n <- color_n + 1
-      n <- as.numeric(unlist(subset))
+      n <- unlist(subset)
       
-      channels <- GetChannels(fsom, channels)
+      if (group == "Cluster") {
+        n <- as.integer(n)
+      } else {
+        n <- as.character(n)
+      }
+      
+      channel_idx <- GetChannels(fsom, channels)
       
       #---- background dataframe ----
       df_bg <- data.frame(fsom$data[i, channels]) 
@@ -1518,51 +1542,44 @@ Plot1DScatters <- function(fsom,
                                         channels,
                                         drop = FALSE],
                            "Population" = factor(n, levels = n))
-        col <- gg_color_hue(nMetaclusters)[metacluster[n]]
-      } else {
-        df_ss <- data.frame(fsom$data[which(metacluster[cellCluster] %in% n), 
-                                      channels,
-                                      drop = FALSE],
-                            "Population" =
-                              metacluster[cellCluster[ 
-                                which(metacluster[cellCluster] %in% n)]])
-        df_c_Population <- metacluster[
-          which(metacluster[1:nrow(medianValues)] %in% n),
-          drop = FALSE]
         
+        col <- gg_color_hue(nMetaclusters)[metacluster_id[n]]
+      } else {
+        cells_idx <- metacluster_factor[cellCluster] %in% n
+        df_ss <- data.frame(
+          fsom$data[cells_idx, channels, drop = FALSE],
+          "Population" = droplevels(metacluster_factor[cellCluster][cells_idx])
+        )
+        
+        clusters_idx <- metacluster_factor %in% n
         df_c <- data.frame(
-          medianValues[which(metacluster[1:nrow(medianValues)] %in% n), 
-                       channels,
-                       drop = FALSE],
-          "Population" = df_c_Population)
-        col <- gg_color_hue(nMetaclusters)[n]
+          medianValues[clusters_idx, channels, drop = FALSE],
+          "Population" = droplevels(metacluster_factor[clusters_idx])
+        )
+        
+        col <- metacluster_colors[n]
       }
       df_ss <- data.frame(df_ss[sample(nrow(df_ss), 
                                        min(nrow(df_ss), maxPoints)), ])
-      df_ss$Population <- factor(df_ss$Population, levels = subset)
-      df_c$Population <- factor(df_c$Population, levels = subset)
-      colnames(df_c) <- c(channels, "Population")
-      colnames(df_ss)[1:length(channels)] <- colnames(df_bg) <- channels
+      df_ss$Population <- droplevels(factor(df_ss$Population))
+      df_c$Population  <- droplevels(factor(df_c$Population))
       
       #---- ggplots ----
       cl_or_mcl <- paste0(group, ifelse(length(subset) > 1, "s", ""), ": ")
-      subset_names <- ifelse(group == "Cluster", 
-                             paste0(subset, collapse = ", "),
-                             paste0(levels(fsom$metaclustering)[unlist(subset)],
-                                    collapse = ", "))
+      subset_names <- paste0(subset, collapse = ", ")
       title <- paste0(cl_or_mcl, subset_names)
       
       if ("marker" %in% xLabels && length(xLabels) == 1) {
-        xLabs <- GetMarkers(fsom, channels)
+        xLabs <- GetMarkers(fsom, channel_idx)
       } else if ("channel" %in% xLabels && length(xLabels) == 1){
-        xLabs <- GetChannels(fsom, channels)
-      } else if (all(c("channel", "marker") %in% xLabels) && length(xLabels) == 2){
-        channels <- GetChannels(fsom, channels)
-        xLabs <- paste0(GetMarkers(fsom, channels), " (", channels, ")")
+        xLabs <- channel_idx
+      } else if (all(c("channel", "marker") %in% xLabels)) {
+        xLabs <- paste0(GetMarkers(fsom, channel_idx), " (", channel_idx, ")")
       }
       
       colnames(df_c) <- c(xLabs, "Population")
-      colnames(df_ss)[1:length(channels)] <- colnames(df_bg) <- xLabs
+      colnames(df_ss)[seq_along(channel_idx)] <- xLabs
+      colnames(df_bg) <- xLabs
       
       bgData <- tidyr::pivot_longer(df_bg, cols = colnames(df_bg),
                                     names_to = "Channel",
@@ -1591,7 +1608,7 @@ Plot1DScatters <- function(fsom,
                        axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, vjust = 1))
       if (!is.null(yLim)) p <- p + ggplot2::ylim(yLim)
       
-      # if no colors are given, the default colors of ggplot are used
+      # if no colors are given, the default colors are used
       if (is.null(colors)) {
         p <- p + ggplot2::geom_point(ggplot2::aes(color = .data$Population),
                                      position = ggforce::position_jitternormal(sd_x = 0.07, sd_y = 0),
@@ -1612,11 +1629,11 @@ Plot1DScatters <- function(fsom,
       
       #----add cluster centers----
       if (centers) {
-          if (!is.null(colors)) {
-            col_c <- colors[[color_n]]
-          } else {
-            col_c <- col
-          }
+        if (!is.null(colors)) {
+          col_c <- colors[[color_n]]
+        } else {
+          col_c <- col
+        }
         p <- p + ggplot2::geom_point(data = dataC,
                                      shape = 21,
                                      ggplot2::aes(x = .data$Channel,

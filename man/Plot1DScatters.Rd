@@ -33,7 +33,9 @@ or a marker}
 
 \item{clusters}{Vector with indices of clusters of interest}
 
-\item{metaclusters}{Vector with indices of metaclusters of interest}
+\item{metaclusters}{Vector with metaclusters of interest. Can be either
+a character vector with metacluster names or a vector
+with metacluster indices.}
 
 \item{maxBgPoints}{Maximum number of background cells to plot}
 
