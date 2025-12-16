@@ -1,3 +1,7 @@
+CHANGES IN VERSION 2.13.13 (2025/12/16)
+--------------------------------------
+o Changed TestOutliers function
+
 CHANGES IN VERSION 2.13.12 (2025/11/18)
 --------------------------------------
 o Added PlotMFIHeatmap function

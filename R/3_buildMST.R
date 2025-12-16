@@ -276,9 +276,9 @@ NewData <- function(fsom,
 #'                                 channels = flowSOM.res$map$colsUsed)
 #' 
 #'  # Number of cells which is an outlier for x channels                               
-#'  outlier_on_multiple_markers <- table(rowSums(outlier_report$channel_specific != 0))          
+#'  outlier_on_multiple_markers <- table(rowSums(outlier_report$perCell != 0))          
 #'  outlier_type <- paste(GetClusters(flowSOM.res),
-#'                        apply(outlier_report$channel_specific, 1, paste0, collapse = ""))
+#'                        apply(outlier_report$perCell, 1, paste0, collapse = ""))
 #'  outlier_counts <- table(grep(" .*1.*", outlier_type, value = TRUE))
 #'  outliers_of_interest <- names(which(outlier_counts > 10))
 #'  outlier_boolean <- outlier_type %in% outliers_of_interest
@@ -345,11 +345,18 @@ TestOutliers <- function(fsom,
   
   
   
-  result <- data.frame(Median_distance = medians, 
-                       Median_absolute_deviation = mads, 
-                       Threshold = thresholds, 
-                       Number_of_outliers = outlier_count, 
-                       Maximum_outlier_distance = max_distances_new)
+  percluster_result <- data.frame(Median_distance = medians, 
+                                  Median_absolute_deviation = mads, 
+                                  Threshold = thresholds, 
+                                  Number_of_outliers = outlier_count, 
+                                  Maximum_outlier_distance = max_distances_new)
+  
+  percell_result = data.frame(from_center = outliers)
+  
+  result <- list(perCluster = percluster_result,
+                 perCell = percell_result)
+  
+  
   if (!is.null(plotFile)) {
     grDevices::pdf(plotFile, width = 20, height = 20)
     print(PlotOutliers(fsom, result))
@@ -357,8 +364,10 @@ TestOutliers <- function(fsom,
   }
   
   if (!is.null(channels)){
-    result <- list(report = result, 
-                   channel_specific = do.call(cbind, outliers_list))
+    channel_specific_result <- cbind(percell_result, outliers_list)
+    
+    result <- list(perCluster = percluster_result, 
+                   perCell = channel_specific_result)
   }
   # result <- result[outliers > 
   #                    0, ][order(outliers[outliers > 0], decreasing = TRUE),]

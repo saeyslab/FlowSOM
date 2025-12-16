@@ -61,6 +61,7 @@ BuildSOM <- function(fsom,
   fsom <- UpdateDerivedValues(fsom)
   
   fsom$outliers <- TestOutliers(fsom,
+                                channels = colsToUse,
                                 madAllowed = outlierMAD)
   return(fsom)
 }
