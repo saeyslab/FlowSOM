@@ -202,7 +202,8 @@ UpdateNodeSize <- function(fsom, count = NULL, reset=FALSE, transform=sqrt,
 #'    
 #'    # Plot cells
 #'    \donttest{
-#'    Plot2DScatters(flowSOM.res, c(1, 2), clusters = 91)
+#'    Plot2DScatters(flowSOM.res, list(c(1, 2)), clusters = 91,
+#'                   plotFile = tempfile(fileext = ".png"))
 #'    }
 #'
 #' @export
@@ -288,13 +289,10 @@ PlotClusters2D <- function(fsom, marker1, marker2, nodes,
 #'    # Recommended to write to png
 #'    
 #'    \donttest{
-#'      png("Markeroverview.png",
-#'          width = 500 * length(markers_of_interest),
-#'          height = 500 * length(metaclusters_of_interest))
 #'      Plot2DScatters(flowSOM.res,
 #'                     channelpairs = markers_of_interest,
-#'                     metaclusters = metaclusters_of_interest)
-#'      dev.off()
+#'                     metaclusters = metaclusters_of_interest,
+#'                     plotFile = tempfile(fileext = ".png"))
 #'    }
 #'
 #' @export
@@ -545,6 +543,7 @@ PlotGroups <- function(fsom,
 #' stats <- GroupStats(features$cluster_percentages,                     
 #'                     groups = list("AllCells" = c(fileName),
 #'                                   "Without_ydTcells" = c("ff_tmp.fcs")))
+#' unlink("ff_tmp.fcs")                                 
 #'
 #' @export 
 CountGroups <- function (fsom, groups, plot = TRUE, silent = FALSE) 

@@ -19,6 +19,8 @@ Plot2DScatters(
   density = TRUE,
   centers = TRUE,
   colors = NULL,
+  fontsize_axes = 12,
+  fontsize_title = 12,
   plotFile = "2DScatterPlots.png"
 )
 }
@@ -32,7 +34,9 @@ or marker names}
 plot) with indices of clusters of interest}
 
 \item{metaclusters}{Vector or list (to combine multiple metaclusters in 
-one plot) with indices of metaclusters of interest}
+one plot) with metaclusters of interest. Can be either
+a character vector with metacluster names or a
+vector with metacluster indices.}
 
 \item{maxBgPoints}{Maximum number of background cells to plot}
 
@@ -60,6 +64,11 @@ use a plain color}
 (ordered list). First the clusters are colored, 
 then the metaclusters. If \code{NULL}, the default 
 ggplot colors, indexed by metacluster number, are used.}
+
+\item{fontsize_axes}{Font size for the x and y axes labels. Default is 12.}
+
+\item{fontsize_title}{Font size for the title. Default is 12. If \code{NULL}, 
+no title is shown.}
 
 \item{plotFile}{If a filepath for a png is given (default = 
 2DScatterPlots.png), the plots will be plotted in 

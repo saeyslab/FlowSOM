@@ -77,7 +77,8 @@ top left will have index 91.
    
    # Plot cells
    \donttest{
-   Plot2DScatters(flowSOM.res, c(1, 2), clusters = 91)
+   Plot2DScatters(flowSOM.res, list(c(1, 2)), clusters = 91,
+                  plotFile = tempfile(fileext = ".png"))
    }
 
 }

@@ -44,6 +44,7 @@ features <- GetFeatures(flowSOM.res,
 stats <- GroupStats(features$cluster_percentages,                     
                     groups = list("AllCells" = c(fileName),
                                   "Without_ydTcells" = c("ff_tmp.fcs")))
+unlink("ff_tmp.fcs")                                 
 
 }
 \seealso{
