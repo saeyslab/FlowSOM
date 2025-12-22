@@ -65,7 +65,7 @@ flowSOM.res <- FlowSOM(fcs_file,
                        seed = 1)
 
 # Make the barplot of the manual labels
-pdf("PlotManualBars.pdf")
+pdf(tempfile(fileext = ".pdf"))
 PlotManualBars(fsom = flowSOM.res,
                fcs = fcs_file,
                manualVector = gatingResult,

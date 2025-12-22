@@ -76,7 +76,7 @@ top left will have index 91.
   flowSOM.res <- BuildMST(flowSOM.res)
    
    # Plot cells
-   \dontrun{
+   \donttest{
    Plot2DScatters(flowSOM.res, c(1, 2), clusters = 91)
    }
 

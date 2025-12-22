@@ -38,6 +38,7 @@ flowSOM.res <- FlowSOM(fcs,
                        nClus = 10,
                        seed = 1)
                        
-FlowSOMmary(flowSOM.res)
+FlowSOMmary(flowSOM.res,
+            plotFile = tempfile(fileext = ".pdf"))
 
 }

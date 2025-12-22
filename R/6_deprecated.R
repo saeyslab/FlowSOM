@@ -201,7 +201,7 @@ UpdateNodeSize <- function(fsom, count = NULL, reset=FALSE, transform=sqrt,
 #'   flowSOM.res <- BuildMST(flowSOM.res)
 #'    
 #'    # Plot cells
-#'    \dontrun{
+#'    \donttest{
 #'    Plot2DScatters(flowSOM.res, c(1, 2), clusters = 91)
 #'    }
 #'
@@ -287,7 +287,7 @@ PlotClusters2D <- function(fsom, marker1, marker2, nodes,
 #'    
 #'    # Recommended to write to png
 #'    
-#'    \dontrun{
+#'    \donttest{
 #'      png("Markeroverview.png",
 #'          width = 500 * length(markers_of_interest),
 #'          height = 500 * length(metaclusters_of_interest))
@@ -360,9 +360,9 @@ MetaclusterMFIs <- function(fsom){
 #' @examples
 #' fileName <- system.file("extdata", "68983.fcs", package="FlowSOM")
 #' ff <- flowCore::read.FCS(fileName)
-#' ff <- flowCore::compensate(ff,ff@@description$SPILL)
+#' ff <- flowCore::compensate(ff,flowCore::keyword(ff)$SPILL)
 #' ff <- flowCore::transform(ff,
-#'          flowCore::transformList(colnames(ff@@description$SPILL),
+#'          flowCore::transformList(colnames(flowCore::keyword(ff)$SPILL),
 #'                                 flowCore::logicleTransform()))
 #' flowSOM.res <- FlowSOM(ff,scale=TRUE,colsToUse=c(9,12,14:18), nClus=10)
 #' cvs <- GetMetaclusterCVs(flowSOM.res)
@@ -441,7 +441,9 @@ MetaclusterCVs <- function(fsom){
 #'                list_insteadof_ggarrange = TRUE)
 #' p <- ggpubr::ggarrange(plotlist = c(list(gr_1$tree), gr_2),
 #'                     heights = c(3, 1))
-#' p                   
+#' p      
+#' 
+#' unlink("ff_tmp.fcs")             
 #'          
 #' @importFrom grDevices colorRampPalette
 #' 
@@ -628,7 +630,7 @@ CountGroups <- function (fsom, groups, plot = TRUE, silent = FALSE)
 #'                                       "PE-Cy7-A" = "low",
 #'                                       "APC-Cy7-A" = "low"))
 #'    query_res <- QueryMultiple(flowSOM.res, cell_types, "query_multiple.pdf")
-#'    
+#'    unlink("query_multiple.pdf")
 #' @export
 query_multiple <- function(fsom,
                            cell_types,
@@ -710,7 +712,7 @@ PlotNode <- function(fsom, id,
   y_tmp <- c(seq(-2,2,by= 4/(sum(!left)+1))[-c(1,sum(!left)+2)],
              seq(2,-2,by=-4/(sum(left)+1))[-c(1,sum(left)+2)])
   shiftFunction <- function(x,n){
-    c(x[(n+1):length(x)],x[1:n])
+    c(x[seq((n+1),length(x))],x[1:n])
   }
   y <- shiftFunction(y_tmp,max((cummax(y_tmp)<0)*seq_along(y_tmp)))
   
@@ -856,7 +858,10 @@ PlotCenters <- function(fsom, marker1, marker2, MST=TRUE){
 #'                  channels = c("Pacific Blue-A", 
 #'                               "Alexa Fluor 700-A", 
 #'                               "PE-Cy7-A"), 
-#'                  maxPoints = 1000)
+#'                  maxPoints = 1000,
+#'                  plotFile = tempfile(fileext = ".png"))
+#'                  
+#' unlink(c("ff_tmp1.fcs", "ff_tmp2.fcs", "ff_tmp3.fcs"))
 #' 
 #' @import ggplot2
 #' @importFrom methods is

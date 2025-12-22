@@ -57,7 +57,7 @@ metaclusters are plotted in color.
    
    # Recommended to write to png
    
-   \dontrun{
+   \donttest{
      png("Markeroverview.png",
          width = 500 * length(markers_of_interest),
          height = 500 * length(metaclusters_of_interest))

@@ -179,10 +179,10 @@ print.FlowSOM <- function(x, ...){
   }
   
   if(!is.null(x$outliers)){
-    n_outliers <- sum(x$outliers$Number_of_outliers)
-    n_mad <- round((x$outliers[1,"Threshold"] - 
-                      x$outliers[1,"Median_distance"]) / 
-                     x$outliers[1,"Median_absolute_deviation"])
+    n_outliers <- sum(x$outliers$perCluster$Number_of_outliers)
+    n_mad <- round((x$outliers$perCluster[1,"Threshold"] - 
+                      x$outliers$perCluster[1,"Median_distance"]) / 
+                     x$outliers$perCluster[1,"Median_absolute_deviation"])
     cat("\n", n_outliers, paste0("cells (",
                                  round(100*n_outliers/nrow(x$data),2),
                                  "%)"),

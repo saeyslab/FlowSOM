@@ -101,12 +101,14 @@ Plot2DScatters(fsom = flowSOM.res,
                                    c("PE-Texas Red-A", "Pacific Blue-A")),
                clusters = c(1, 48, 49, 82, 95),
                metaclusters = list(c(1, 4), 9),
-               density = FALSE)
+               density = FALSE,
+               plotFile = tempfile(fileext = ".png"))
                
 Plot2DScatters(fsom = flowSOM.res,
                channelpairs = list(c("PE-Texas Red-A", "Pacific Blue-A")),
                metaclusters = list(c(1, 4)),
                density = FALSE,
-               colors = list(c("red", "green")))
+               colors = list(c("red", "green")),
+               plotFile = tempfile(fileext = ".png"))
 
 }

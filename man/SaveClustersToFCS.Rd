@@ -48,4 +48,7 @@ flowSOM.res <- FlowSOM(fileName, compensate = TRUE, transform = TRUE,
                       scale = TRUE, colsToUse = c(9, 12, 14:18), nClus = 10)
 SaveClustersToFCS(flowSOM.res, fileName)
 
+# Remove file again for clean example
+unlink("68983_FlowSOM.fcs")
+
 }

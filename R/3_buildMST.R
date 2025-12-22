@@ -226,8 +226,8 @@ NewData <- function(fsom,
   test_outliers <- TestOutliers(fsom_new,
                                 madAllowed = madAllowed,
                                 fsomReference = fsom)
-  max_outliers <- max(test_outliers$Number_of_outliers) 
-  n_outliers <- sum(test_outliers$Number_of_outliers) 
+  max_outliers <- max(test_outliers$perCluster$Number_of_outliers) 
+  n_outliers <- sum(test_outliers$perCluster$Number_of_outliers)
   if(max_outliers > 100){
     warning(n_outliers, 
             " cells (",
@@ -351,7 +351,7 @@ TestOutliers <- function(fsom,
                                   Number_of_outliers = outlier_count, 
                                   Maximum_outlier_distance = max_distances_new)
   
-  percell_result = data.frame(from_center = outliers)
+  percell_result <- data.frame(from_center = outliers)
   
   result <- list(perCluster = percluster_result,
                  perCell = percell_result)

@@ -75,7 +75,9 @@ gr_2 <- PlotStars(fsom, title = "Group 2",
                list_insteadof_ggarrange = TRUE)
 p <- ggpubr::ggarrange(plotlist = c(list(gr_1$tree), gr_2),
                     heights = c(3, 1))
-p                   
+p      
+
+unlink("ff_tmp.fcs")             
          
 }
 \seealso{

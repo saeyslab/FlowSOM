@@ -106,10 +106,12 @@ Plot1DScatters(fsom = flowSOM.res,
               channels = c("PE-Cy7-A", "PE-Cy5-A"),
               clusters = c(1, 48, 49, 82, 95),
               metaclusters = list(c(1, 4), 9),
-              xLabels = c("marker", "channel"))
+              xLabels = c("marker", "channel"),
+              plotFile = tempfile(fileext = ".png"))
 Plot1DScatters(flowSOM.res, 
               metaclusters = 4, 
               clusters = c(1, 2),
-              colors = c("red", "green", "blue"))                       
+              colors = c("red", "green", "blue"),
+              plotFile = tempfile(fileext = ".png"))                       
 
 }

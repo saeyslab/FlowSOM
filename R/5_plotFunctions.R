@@ -925,7 +925,7 @@ PlotDimRed <- function(fsom,
 #'                        seed = 1)
 #' 
 #' # Make the barplot of the manual labels
-#' pdf("PlotManualBars.pdf")
+#' pdf(tempfile(fileext = ".pdf"))
 #' PlotManualBars(fsom = flowSOM.res,
 #'                fcs = fcs_file,
 #'                manualVector = gatingResult,
@@ -1137,13 +1137,15 @@ PlotManualBars <- function(fsom, fcs = NULL,
 #'                                    c("PE-Texas Red-A", "Pacific Blue-A")),
 #'                clusters = c(1, 48, 49, 82, 95),
 #'                metaclusters = list(c(1, 4), 9),
-#'                density = FALSE)
+#'                density = FALSE,
+#'                plotFile = tempfile(fileext = ".png"))
 #'                
 #' Plot2DScatters(fsom = flowSOM.res,
 #'                channelpairs = list(c("PE-Texas Red-A", "Pacific Blue-A")),
 #'                metaclusters = list(c(1, 4)),
 #'                density = FALSE,
-#'                colors = list(c("red", "green")))
+#'                colors = list(c("red", "green")),
+#'                plotFile = tempfile(fileext = ".png"))
 #' 
 #' @import     ggplot2
 #' @importFrom colorRamps matlab.like2
@@ -1409,11 +1411,13 @@ Plot2DScatters <- function(fsom,
 #'               channels = c("PE-Cy7-A", "PE-Cy5-A"),
 #'               clusters = c(1, 48, 49, 82, 95),
 #'               metaclusters = list(c(1, 4), 9),
-#'               xLabels = c("marker", "channel"))
+#'               xLabels = c("marker", "channel"),
+#'               plotFile = tempfile(fileext = ".png"))
 #'Plot1DScatters(flowSOM.res, 
 #'               metaclusters = 4, 
 #'               clusters = c(1, 2),
-#'               colors = c("red", "green", "blue"))                       
+#'               colors = c("red", "green", "blue"),
+#'               plotFile = tempfile(fileext = ".png"))                       
 #' 
 #' @import     ggplot2
 #' @importFrom grDevices png dev.off
@@ -1759,7 +1763,8 @@ QueryStarPlot <- function(fsom,
 #'                        "NK cells" = c("PE-A" = "high",
 #'                                       "PE-Cy7-A" = "low",
 #'                                       "APC-Cy7-A" = "low"))
-#'    query_res <- QueryMultiple(flowSOM.res, cellTypes, "query_multiple.pdf")
+#'    query_res <- QueryMultiple(flowSOM.res, cellTypes, 
+#'                               plotFile = tempfile(fileext = ".pdf"))
 #'    
 #' @export
 QueryMultiple <- function(fsom,
@@ -2633,7 +2638,7 @@ AddStars <- function(p,
 #' 
 #' @importFrom grDevices hcl
 gg_color_hue <- function(n) {
-  hues = seq(15, 375, length = n + 1)
+  hues <- seq(15, 375, length = n + 1)
   hcl(h = hues, l = 65, c = 100)[1:n]
 }
 
@@ -2668,7 +2673,8 @@ gg_color_hue <- function(n) {
 #'                        nClus = 10,
 #'                        seed = 1)
 #'                        
-#' FlowSOMmary(flowSOM.res)
+#' FlowSOMmary(flowSOM.res,
+#'             plotFile = tempfile(fileext = ".pdf"))
 #' 
 #' @import ggplot2
 #' @importFrom ggpubr ggarrange ttheme ggtexttable

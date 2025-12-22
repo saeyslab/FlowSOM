@@ -59,7 +59,7 @@ output
                                       "ff_tmp4.fcs", 
                                       "ff_tmp5.fcs"), 
                             type = "percentages")
-                       
+                            
   
 # Perform the statistics
 groups <- list("Group 1" = c("ff_tmp1.fcs", "ff_tmp2.fcs", "ff_tmp3.fcs"), 
@@ -92,12 +92,12 @@ gr_2 <- PlotStars(flowSOM.res, title = "Group 2",
             list_insteadof_ggarrange = TRUE)
 p <- ggpubr::ggarrange(plotlist = c(list(gr_1$tree), gr_2),
                        heights = c(3, 1))
-ggplot2::ggsave("Groups_foldchanges.pdf", p, width = 10)
+ggplot2::ggsave(tempfile(fileext = ".png"), p, width = 10)
 
 ## p values
 p <- PlotVariable(flowSOM.res, title = "Wilcox test group 1 vs. group 2",
 variable = C_stats["p values", ])
-ggplot2::ggsave("Groups_pvalues.pdf", p)
+ggplot2::ggsave(tempfile(fileext = ".png"), p)
 
 ## volcano plot
 p <- ggplot2::ggplot(data.frame("-log10 p values" = c(C_stats[4, ], 
@@ -109,5 +109,13 @@ check.names = FALSE), ggplot2::aes(x = `log10 fold changes`,
 ggplot2::xlim(-3, 3) +
 ggplot2::ylim(0, 3) +
 ggplot2::geom_point() 
+
+# Remove temporary files
+unlink(c("ff_tmp1.fcs", 
+         "ff_tmp2.fcs", 
+         "ff_tmp3.fcs",
+         "ff_tmp4.fcs", 
+         "ff_tmp5.fcs"))
+                       
 
 }
