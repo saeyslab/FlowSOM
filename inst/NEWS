@@ -1,3 +1,7 @@
+CHANGES IN VERSION 2.19.2 (2026/01/16)
+--------------------------------------
+o In NewData, only give warning messages when paramter in fsom object is TRUE
+
 CHANGES IN VERSION 2.13.16 (2025/12/16)
 --------------------------------------
 o Changed input of metacluster parameter in Plot1DScatters to character

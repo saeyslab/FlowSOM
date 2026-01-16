@@ -3,3 +3,5 @@
 *.Rhistory
 .Rproj.user
 FlowSOM.Rproj
+.DS_Store
+src/

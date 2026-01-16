@@ -177,15 +177,19 @@ NewData <- function(fsom,
                     silent = FALSE){
   fsom <- UpdateFlowSOM(fsom)
   if(is.null(compensate)){
+    if (fsom$compensate){
+       warning("Data will be compensated as was done while computing the FlowSOM object.")
+    }
     compensate <- fsom$compensate
-    warning("Data will be compensated as was done while computing the FlowSOM object.")
   }
   if(is.null(spillover)){
     spillover <- fsom$spillover
   }
   if(is.null(transform)){
+    if (fsom$transform){
+      warning("Data will be transformed as was done while computing the FlowSOM object.")
+    }
     transform <- fsom$transform
-    warning("Data will be transformed as was done while computing the FlowSOM object.")
   }
   if(is.null(toTransform)){
     toTransform <- fsom$toTransform
@@ -197,8 +201,10 @@ NewData <- function(fsom,
     transformList <- fsom$transformList
   }
   if(is.null(scale)){
+    if (fsom$scale){
+      warning("Data will be scaled as was done while computing the FlowSOM object.")
+    }
     scale <- fsom$scale
-    warning("Data will be scaled as was done while computing the FlowSOM object.")
   }
   if(is.null(scaled.center)){
     scaled.center <- fsom$scaled.center
