@@ -2845,14 +2845,10 @@ FlowSOMmary <- function(fsom, plotFile = "FlowSOMmary.pdf"){
     #----Median expression per metacluster----
     
     message("Plot heatmap")
-    if (requireNamespace("ComplexHeatmap", quietly = TRUE)) {
-      plotList[["p10"]] <- PlotMFIHeatmap(fsom, level = "metaclusters",
-                                          cluster_rows = TRUE, 
-                                          cluster_columns = TRUE,
-                                          labels = TRUE)
-    } else {
-      message("Please install \"ComplexHeatmap\" to add a heatmap to the FlowSOMmary")
-    }
+    plotList[["p10"]] <- PlotMFIHeatmap(fsom, level = "metaclusters",
+                                        cluster_rows = TRUE, 
+                                        cluster_columns = TRUE,
+                                        labels = TRUE)
   }
   
   #----Table----

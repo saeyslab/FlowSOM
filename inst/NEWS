@@ -1,3 +1,7 @@
+CHANGES IN VERSION 2.19.5 (2026/04/01)
+--------------------------------------
+o Removed redundant line of code in FlowSOMmary function
+
 CHANGES IN VERSION 2.19.4 (2026/03/16)
 --------------------------------------
 o Removed #include <PrtUtil.h> from the C script, as this is not supported anymore, and I don't think we actually still used it.
