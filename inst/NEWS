@@ -1,3 +1,7 @@
+CHANGES IN VERSION 2.19.6 (2026/04/10)
+--------------------------------------
+o Fixed legend plotting in QueryStarPlot()
+
 CHANGES IN VERSION 2.19.5 (2026/04/01)
 --------------------------------------
 o Removed redundant line of code in FlowSOMmary function

@@ -1741,7 +1741,7 @@ QueryStarPlot <- function(fsom,
   fsom <- UpdateFlowSOM(fsom)
   names(query) <- GetChannels(fsom, names(query))
   markers <- names(query)
-  lowMarkers <- pmatch("l", query)
+  lowMarkers <- grep("l", query)
   query <- ParseQuery(fsom, query)
   if (plot){
     fP <- PlotStars(fsom = fsom,
