@@ -40,7 +40,8 @@ Imports:
     Rtsne,
     tidyr,
     BiocGenerics,
-    XML
+    XML,
+    scales
 Suggests:
     BiocStyle,
     testthat,

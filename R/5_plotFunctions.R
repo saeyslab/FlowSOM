@@ -3364,6 +3364,7 @@ PlotMFIHeatmap <- function(fsom,
 #' @importFrom ggpubr ggarrange annotate_figure text_grob
 #' @importFrom colorRamps matlab.like2
 #' @importFrom scales squish
+#' @importFrom stats sd
 #' 
 #' @export
 PlotOutliers <- function(fsom, 
