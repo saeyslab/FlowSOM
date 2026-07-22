@@ -78,10 +78,10 @@
 #' @importFrom BiocGenerics colnames
 #' @importFrom ConsensusClusterPlus ConsensusClusterPlus
 #' @importFrom flowCore read.FCS compensate transform logicleTransform exprs 
-#'             transformList write.FCS 'exprs<-' keyword fr_append_cols
+#' @importFrom flowCore transformList write.FCS 'exprs<-' keyword fr_append_cols
 #' @importFrom igraph graph.adjacency minimum.spanning.tree layout.kamada.kawai
-#'             plot.igraph add.vertex.shape get.edges shortest.paths E V 'V<-'
-#'             igraph.shape.noclip
+#' @importFrom igraph plot.igraph add.vertex.shape get.edges shortest.paths E V 
+#' @importFrom igraph 'V<-' igraph.shape.noclip
 #' @importFrom rlang .data
 #' @importFrom stats prcomp
 #' @importFrom utils capture.output packageVersion
@@ -231,7 +231,7 @@ print.FlowSOM <- function(x, ...){
 #' ff_new <- AggregateFlowFrames(c(fileName, fileName), 1000)
 #' 
 #' @importFrom flowCore read.FCS fr_append_cols keyword colnames markernames 
-#'             exprs write.FCS sampleNames
+#' @importFrom flowCore exprs write.FCS sampleNames
 #' @importFrom stats rnorm
 #' @importFrom methods is
 #' 

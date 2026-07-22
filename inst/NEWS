@@ -1,3 +1,9 @@
+CHANGES IN VERSION 2.19.7 (2026/07/22)
+--------------------------------------
+o Fixed PlotOutliers()
+o Renamed PlotOutliers() to PlotDistancesToCenter()
+o Added PlotOutliers() function that generates scatter plots with outliers
+
 CHANGES IN VERSION 2.19.6 (2026/04/10)
 --------------------------------------
 o Fixed legend plotting in QueryStarPlot()
