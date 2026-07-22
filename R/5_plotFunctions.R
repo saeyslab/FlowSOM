@@ -3146,9 +3146,9 @@ PlotOutliers <- function(fsom, outlierReport){
                                                       fill = "grey90", 
                                                       col = "black", 
                                                       size = 0.2) + 
-                              ggplot2::geom_vline(ggplot2::aes(xintercept = outlierReport$Median_distance[i]), 
+                              ggplot2::geom_vline(ggplot2::aes(xintercept = outlierReport$perCluster$Median_distance[i]), 
                                                   col = "black") + 
-                              ggplot2::geom_vline(ggplot2::aes(xintercept = outlierReport$Threshold[i]), 
+                              ggplot2::geom_vline(ggplot2::aes(xintercept = outlierReport$perCluster$Threshold[i]), 
                                                   col = "red") + 
                               ggplot2::ggtitle(paste0(i, 
                                                       " (", nOutliers, ")")) + 
