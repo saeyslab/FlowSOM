@@ -3140,7 +3140,7 @@ PlotOutliers <- function(fsom, outlierReport){
     ids <- which(GetClusters(fsom) == i)
     values <- fsom$map$mapping[ids, 2]
     if (length(values) > 1) {
-      nOutliers <- sum(values > outlierReport$Threshold[i])
+      nOutliers <- sum(values > outlierReport$perCluster$Threshold[i])
       p <- suppressMessages(ggplot2::ggplot() + 
                               ggplot2::geom_histogram(ggplot2::aes(values), 
                                                       fill = "grey90", 
