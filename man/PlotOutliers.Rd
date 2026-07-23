@@ -10,7 +10,8 @@ PlotOutliers(
   files,
   filenames = NULL,
   perc_outliersPerCluster = 10,
-  n_cellsPerCluster = 100,
+  min_cellsPerFlowSOMCluster = 100,
+  min_cellsPerFileCluster = 0,
   plotFile = "ouliersPerCluster.pdf"
 )
 }
@@ -29,8 +30,11 @@ present}
 \item{perc_outliersPerCluster}{Clusters with a percentage of outliers higher
 than this number will be plotted}
 
-\item{n_cellsPerCluster}{Clusters with less than this number of cells in fsom
-won't be considered}
+\item{min_cellsPerFlowSOMCluster}{Clusters with less than this number of cells in 
+fsom won't be considered}
+
+\item{min_cellsPerFileCluster}{Clusters with less than this number of cells in 
+won't be considered for that file}
 
 \item{plotFile}{If a filepath for a png is given (default = 
 ouliersPerCluster.pdf), the plots will be plotted in the 
@@ -70,6 +74,9 @@ calculated and visualized per dimension.
                          files = c(ff[15001:16000, ], ff[16001:17000, ]))
  p <- PlotOutliers(fsom = flowSOM.res, features = features, 
                    files = c(ff[15001:17000, ], ff[17001:19000, ]),
-                   perc_outliersPerCluster = 10, n_cellsPerCluster = 100)                       
+                   perc_outliersPerCluster = 10, 
+                   min_cellsPerFlowSOMCluster = 100,
+                   min_cellsPerFileCluster = 10, 
+                   plotFile = NULL)                       
 
 }

@@ -3324,8 +3324,10 @@ PlotMFIHeatmap <- function(fsom,
 #'                  \code{NULL}
 #' @param perc_outliersPerCluster Clusters with a percentage of outliers higher
 #'                                than this number will be plotted
-#' @param n_cellsPerCluster Clusters with less than this number of cells in fsom
-#'                          won't be considered
+#' @param min_cellsPerFlowSOMCluster Clusters with less than this number of cells in 
+#'                            fsom won't be considered
+#' @param min_cellsPerFileCluster Clusters with less than this number of cells in 
+#'                                won't be considered for that file
 #' @param plotFile If a filepath for a png is given (default = 
 #'                 ouliersPerCluster.pdf), the plots will be plotted in the 
 #'                 corresponding pdf file. If \code{NULL}, a list of ggplot 
@@ -3358,7 +3360,10 @@ PlotMFIHeatmap <- function(fsom,
 #'                          files = c(ff[15001:16000, ], ff[16001:17000, ]))
 #'  p <- PlotOutliers(fsom = flowSOM.res, features = features, 
 #'                    files = c(ff[15001:17000, ], ff[17001:19000, ]),
-#'                    perc_outliersPerCluster = 10, n_cellsPerCluster = 100)                       
+#'                    perc_outliersPerCluster = 10, 
+#'                    min_cellsPerFlowSOMCluster = 100,
+#'                    min_cellsPerFileCluster = 10, 
+#'                    plotFile = NULL)                       
 #' 
 #' @import ggplot2 
 #' @importFrom ggpubr ggarrange annotate_figure text_grob
@@ -3372,13 +3377,16 @@ PlotOutliers <- function(fsom,
                          files,
                          filenames = NULL,
                          perc_outliersPerCluster = 10,
-                         n_cellsPerCluster = 100, 
+                         min_cellsPerFlowSOMCluster = 100,
+                         min_cellsPerFileCluster = 0,
                          plotFile = "ouliersPerCluster.pdf"){
-  outlier_pctgs_c <- 100*attributes(features$cluster_counts)$outliers/features$cluster_counts
-  # Filter on clusters with >n_cellsPerCluster cells
-  tmp <- outlier_pctgs_c[, as.numeric(names(table(GetClusters(fsom))>n_cellsPerCluster))
-                         [table(GetClusters(fsom))>n_cellsPerCluster], drop=F] 
-  idx <- which(tmp > perc_outliersPerCluster, arr.ind = TRUE)
+  outlier_pctgs_c <- 100*features$outliers/features$cluster_counts
+  # Filter on clusters with >min_cellsPerFlowSOMCluster cells
+  i <- as.numeric(names(table(GetClusters(fsom))>min_cellsPerFlowSOMCluster))[table(GetClusters(fsom))>min_cellsPerFlowSOMCluster]
+  tmp <- outlier_pctgs_c[, i, drop=F] 
+  idx <- which((tmp > perc_outliersPerCluster & 
+                  features$cluster_counts[,i] > min_cellsPerFileCluster),
+               arr.ind = TRUE)
   
   result <- data.frame(
     cluster = colnames(tmp)[idx[, "col"]],
@@ -3401,9 +3409,11 @@ PlotOutliers <- function(fsom,
     for (C in unique(result$cluster[result$file == file])){
       i <- which(result$cluster == C & result$file == file)
       C <- sub("C", "", C)
-      df_fsomNew_c <- data.frame(fsom_new$data[GetClusters(fsom_new) == C,fsom$map$colsUsed], 
+      df_fsomNew_c <- data.frame(fsom_new$data[GetClusters(fsom_new) == C,fsom$map$colsUsed,
+                                               drop = FALSE], 
                                  check.names = FALSE)
-      df_fsomRef_c <- data.frame(fsom$data[GetClusters(fsom) == C,fsom$map$colsUsed], 
+      df_fsomRef_c <- data.frame(fsom$data[GetClusters(fsom) == C,fsom$map$colsUsed,
+                                           drop = FALSE], 
                                  check.names = FALSE)
       df_meansd <- data.frame("mean" = apply(df_fsomRef_c, 2, mean),
                               "sd" = apply(df_fsomRef_c, 2, sd))
@@ -3424,10 +3434,10 @@ PlotOutliers <- function(fsom,
                             y1 = df_meansd[channel2,"mean"] - 4*df_meansd[channel2,"sd"],
                             y2 = df_meansd[channel2,"mean"] + 4*df_meansd[channel2,"sd"])
       
-      p_list[[paste0("C", C, "_", file)]] <- ggplot2::ggplot(data = fsom$data, 
+      p_list[[paste0("C", C, "_", file)]] <- ggplot2::ggplot(data = as.data.frame(fsom$data), 
                                                         ggplot2::aes(x = !!ggplot2::sym(channel1), 
                                                           y = !!ggplot2::sym(channel2))) +
-        ggplot2::geom_hex(data = fsom$data, bins = 100, fill = "#EBEBEB") + 
+        ggplot2::geom_hex(data = as.data.frame(fsom$data), bins = 100, fill = "#EBEBEB") + 
         ggplot2::geom_hex(data = df_fsomRef_c, bins = 100, fill = "#B8B8B8") +
         ggplot2::geom_hex(data = df_fsomNew_c, bins = 100) +
         ggplot2::scale_fill_gradientn(colors = colorRamps::matlab.like2(50), limit = c(0,10),oob=scales::squish) +
