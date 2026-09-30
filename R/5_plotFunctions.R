@@ -3434,10 +3434,10 @@ PlotOutliers <- function(fsom,
                             y1 = df_meansd[channel2,"mean"] - 4*df_meansd[channel2,"sd"],
                             y2 = df_meansd[channel2,"mean"] + 4*df_meansd[channel2,"sd"])
       
-      p_list[[paste0("C", C, "_", file)]] <- ggplot2::ggplot(data = as.data.frame(fsom$data), 
+      p_list[[paste0("C", C, "_", file)]] <- ggplot2::ggplot(data = as.data.frame(fsom$data[,c(channel1, channel2)]), 
                                                         ggplot2::aes(x = !!ggplot2::sym(channel1), 
                                                           y = !!ggplot2::sym(channel2))) +
-        ggplot2::geom_hex(data = as.data.frame(fsom$data), bins = 100, fill = "#EBEBEB") + 
+        ggplot2::geom_hex(data = as.data.frame(fsom$data[,c(channel1, channel2)]), bins = 100, fill = "#EBEBEB") + 
         ggplot2::geom_hex(data = df_fsomRef_c, bins = 100, fill = "#B8B8B8") +
         ggplot2::geom_hex(data = df_fsomNew_c, bins = 100) +
         ggplot2::scale_fill_gradientn(colors = colorRamps::matlab.like2(50), limit = c(0,10),oob=scales::squish) +
