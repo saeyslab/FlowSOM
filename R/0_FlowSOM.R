@@ -254,8 +254,8 @@ AggregateFlowFrames <- function(fileNames,
   fileMatrix <- NULL
   
   diffNumberChannels <- FALSE
-  diffMarkers <- FALSE
-  
+  markerMismatches <- character(0)
+
   for(i in seq_len(nFiles)){
     if(is(fileNames, "flowSet")) {
       file_name <- sampleNames(fileNames)[i]
@@ -296,6 +296,7 @@ AggregateFlowFrames <- function(fileNames,
     }
     
     if(is.null(flowFrame)){
+      refFile <- file_name
       fileMatrix <- m
       if(is.null(channels)){
         channels <- colnames(f)
@@ -317,10 +318,23 @@ AggregateFlowFrames <- function(fileNames,
         diffNumberChannels <- TRUE
       }
       
-      if (!diffMarkers && 
-          any(!flowCore::markernames(f)[commonCols] %in% 
-              flowCore::markernames(flowFrame)[commonCols])){
-        diffMarkers <- TRUE
+      # Compare the marker of every shared channel with the first file.
+      # markernames() gives NA for channels without a marker.
+      refMarkers <- unname(flowCore::markernames(flowFrame)[commonCols])
+      fileMarkers <- unname(flowCore::markernames(f)[commonCols])
+      differs <- ifelse(is.na(refMarkers) | is.na(fileMarkers),
+                        is.na(refMarkers) != is.na(fileMarkers),
+                        refMarkers != fileMarkers)
+      if (any(differs)){
+        showMarker <- function(x) ifelse(is.na(x), "NA",
+                                         paste0("\"", x, "\""))
+        markerMismatches <- c(markerMismatches,
+                              paste0("  ", basename(file_name), ": ",
+                                     paste0(commonCols[differs], " is ",
+                                            showMarker(fileMarkers[differs]),
+                                            " (", showMarker(refMarkers[differs]),
+                                            " in first file)",
+                                            collapse = ", ")))
       }
       
       flowCore::exprs(flowFrame) <- 
@@ -348,8 +362,10 @@ AggregateFlowFrames <- function(fileNames,
             "Zeros might have been imputed for missing values.")
   }
   
-  if (diffMarkers){ 
-    warning("Files do not contain the same markers")
+  if (length(markerMismatches) > 0){
+    warning("Files do not contain the same markers. Compared to the first ",
+            "file (", basename(refFile), "):\n",
+            paste(markerMismatches, collapse = "\n"))
   }
   
   if(writeOutput){
