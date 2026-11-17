@@ -1,7 +1,8 @@
 *.o
+*.so
 *.dll
 *.Rhistory
 .Rproj.user
 FlowSOM.Rproj
 .DS_Store
-src/
+dev/

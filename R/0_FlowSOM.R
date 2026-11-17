@@ -217,6 +217,14 @@ print.FlowSOM <- function(x, ...){
 #'                              than actually present, all cells will be included
 #'                              plus additional resampling. Otherwise, at most 
 #'                              all cells will be included once. Default = FALSE.
+#' @param missingChannels What to do when a file lacks some of the channels
+#'                        (the channels of the first file, or the ones asked
+#'                        for in \code{channels}). "zero" (default) fills them
+#'                        with zeros, "drop" keeps only the channels that are
+#'                        present in all files and "error" stops with an
+#'                        overview of the missing channels. Note that zeros
+#'                        look like real (negative) measurements and can
+#'                        bias the clustering.
 #' @param ...     Additional arguments to pass to read.FCS
 #'                  
 #' @return This function does not return anything, but will write a file with
@@ -244,18 +252,26 @@ AggregateFlowFrames <- function(fileNames,
                                 keepOrder = FALSE, 
                                 silent = FALSE,
                                 sampleWithReplacement = FALSE,
+                                missingChannels = c("zero", "drop", "error"),
                                 ...){
-  
+
+  missingChannels <- match.arg(missingChannels)
+
   # Compute number of cells per file
   nFiles <- length(fileNames)
   cFile <- ceiling(cTotal/nFiles)
-  
+
   flowFrame <- NULL
   fileMatrix <- NULL
-  
-  diffNumberChannels <- FALSE
-  diffMarkers <- FALSE
-  
+
+  allChannels <- is.null(channels)
+  markerMismatches <- character(0)
+  missingPerFile <- character(0)
+  extraPerFile <- character(0)
+  fileLine <- function(file_name, x){
+    paste0("  ", basename(file_name), ": ", paste(x, collapse = ", "))
+  }
+
   for(i in seq_len(nFiles)){
     if(is(fileNames, "flowSet")) {
       file_name <- sampleNames(fileNames)[i]
@@ -284,43 +300,79 @@ AggregateFlowFrames <- function(fileNames,
                file_ids + stats::rnorm(length(file_ids), 0, 0.1),
                ids)
     
-    f <- f[ids,] 
-    if(!all(channels %in% colnames(f))){
-      diffNumberChannels <- TRUE
-      channelsToAdd <- channels[ ! channels %in% colnames(f)]
-      extracols <- matrix(0, 
-                          nrow = flowCore::nrow(f), 
-                          ncol = length(channelsToAdd),
-                          dimnames = list(NULL, channelsToAdd))
-      f <- flowCore::fr_append_cols(f, extracols)
-    }
-    
+    f <- f[ids,]
+
     if(is.null(flowFrame)){
-      fileMatrix <- m
-      if(is.null(channels)){
+      # Translate marker names to channel names once, using the first file,
+      # so that all files are compared by channel name. Names that cannot be
+      # found in the first file are kept as they are (treated as channels).
+      if(allChannels){
         channels <- colnames(f)
-        flowFrame <- f
+      } else if(is.character(channels)){
+        channels <- unlist(lapply(channels, function(ch){
+          tryCatch(GetChannels(f, ch), error = function(e) ch)
+        }))
       } else {
         channels <- GetChannels(f, channels)
-        flowFrame <- f[, channels, drop = FALSE]
+      }
+      channels <- unique(unname(channels))
+    } else if(allChannels){
+      extra <- setdiff(colnames(f), channels)
+      if(length(extra) > 0){
+        extraPerFile <- c(extraPerFile, fileLine(file_name, extra))
+      }
+    }
+
+    missing <- setdiff(channels, colnames(f))
+    if(length(missing) > 0){
+      missingPerFile <- c(missingPerFile, fileLine(file_name, missing))
+      if(missingChannels == "zero"){
+        extracols <- matrix(0,
+                            nrow = flowCore::nrow(f),
+                            ncol = length(missing),
+                            dimnames = list(NULL, missing))
+        f <- flowCore::fr_append_cols(f, extracols)
+      }
+    }
+
+    if(is.null(flowFrame)){
+      refFile <- file_name
+      fileMatrix <- m
+      flowFrame <- f[, intersect(channels, colnames(f)), drop = FALSE]
+      if(ncol(flowFrame) == 0){
+        stop("None of the requested channels are present in ",
+             basename(file_name))
       }
       flowCore::keyword(flowFrame)[["$FIL"]] <- basename(outputFile)
       flowCore::keyword(flowFrame)[["FILENAME"]] <- basename(outputFile)
     } else {
-      cols_f <- flowCore::colnames(f)
       cols_flowFrame <- flowCore::colnames(flowFrame)
-      commonCols <- intersect(cols_f, cols_flowFrame)
-      
+      commonCols <- intersect(cols_flowFrame, flowCore::colnames(f))
+
       if (length(commonCols) == 0) stop("No common channels between files")
-      if (!diffNumberChannels && 
-          length(cols_flowFrame) != length(commonCols)){
-        diffNumberChannels <- TRUE
+      if (length(commonCols) < length(cols_flowFrame)){
+        flowFrame <- flowFrame[, commonCols, drop = FALSE]
       }
-      
-      if (!diffMarkers && 
-          any(!flowCore::markernames(f)[commonCols] %in% 
-              flowCore::markernames(flowFrame)[commonCols])){
-        diffMarkers <- TRUE
+
+      # Compare the marker of every shared channel with the first file.
+      # markernames() gives NA for channels without a marker. Channels that
+      # were filled with zeros are already reported as missing.
+      compareCols <- setdiff(commonCols, missing)
+      refMarkers <- unname(flowCore::markernames(flowFrame)[compareCols])
+      fileMarkers <- unname(flowCore::markernames(f)[compareCols])
+      differs <- ifelse(is.na(refMarkers) | is.na(fileMarkers),
+                        is.na(refMarkers) != is.na(fileMarkers),
+                        refMarkers != fileMarkers)
+      if (any(differs)){
+        showMarker <- function(x) ifelse(is.na(x), "NA",
+                                         paste0("\"", x, "\""))
+        markerMismatches <- c(markerMismatches,
+                              paste0("  ", basename(file_name), ": ",
+                                     paste0(compareCols[differs], " is ",
+                                            showMarker(fileMarkers[differs]),
+                                            " (", showMarker(refMarkers[differs]),
+                                            " in first file)",
+                                            collapse = ", ")))
       }
       
       flowCore::exprs(flowFrame) <- 
@@ -330,7 +382,20 @@ AggregateFlowFrames <- function(fileNames,
       fileMatrix <- rbind(fileMatrix, m)
     }
   }
-  
+
+  if (length(missingPerFile) > 0){
+    missingMessage <- paste0(
+      "Files do not contain the same channels. Missing compared to ",
+      if (allChannels) paste0("the first file (", basename(refFile), ")")
+      else "the requested channels", ":\n",
+      paste(missingPerFile, collapse = "\n"))
+    if (missingChannels == "error"){
+      stop(missingMessage, "\nUse missingChannels = \"drop\" to keep only ",
+           "the channels present in all files, or missingChannels = \"zero\" ",
+           "to fill the missing values with zeros.")
+    }
+  }
+
   colnames <- c("File", "File_scattered", "Original_ID")
   prev_agg <- length(grep("File[0-9]*$", colnames(flowFrame)))
   if(prev_agg > 0){
@@ -343,13 +408,29 @@ AggregateFlowFrames <- function(fileNames,
   colnames(fileMatrix) <- colnames
   flowFrame <- flowCore::fr_append_cols(flowFrame, fileMatrix)
   
-  if (diffNumberChannels){
-    warning("Files do not contain the same number of channels/markers. ",
-            "Zeros might have been imputed for missing values.")
+  if (length(missingPerFile) > 0){
+    if (missingChannels == "zero"){
+      warning(missingMessage, "\nThese values were filled with zeros, which ",
+              "look like real (negative) measurements and can bias the ",
+              "clustering. Use missingChannels = \"drop\" to keep only the ",
+              "channels present in all files.")
+    } else {
+      warning(missingMessage, "\nThese channels were left out of the ",
+              "aggregate: ",
+              paste(setdiff(channels, colnames(flowFrame)), collapse = ", "))
+    }
+  }
+
+  if (length(extraPerFile) > 0){
+    warning("Some files contain channels that are not in the first file (",
+            basename(refFile), "). These channels were left out:\n",
+            paste(extraPerFile, collapse = "\n"))
   }
   
-  if (diffMarkers){ 
-    warning("Files do not contain the same markers")
+  if (length(markerMismatches) > 0){
+    warning("Files do not contain the same markers. Compared to the first ",
+            "file (", basename(refFile), "):\n",
+            paste(markerMismatches, collapse = "\n"))
   }
   
   if(writeOutput){

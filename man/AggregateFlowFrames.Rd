@@ -13,6 +13,7 @@ AggregateFlowFrames(
   keepOrder = FALSE,
   silent = FALSE,
   sampleWithReplacement = FALSE,
+  missingChannels = c("zero", "drop", "error"),
   ...
 )
 }
@@ -41,6 +42,15 @@ new file. Default = FALSE.}
 than actually present, all cells will be included
 plus additional resampling. Otherwise, at most 
 all cells will be included once. Default = FALSE.}
+
+\item{missingChannels}{What to do when a file lacks some of the channels
+(the channels of the first file, or the ones asked
+for in \code{channels}). "zero" (default) fills them
+with zeros, "drop" keeps only the channels that are
+present in all files and "error" stops with an
+overview of the missing channels. Note that zeros
+look like real (negative) measurements and can
+bias the clustering.}
 
 \item{...}{Additional arguments to pass to read.FCS}
 }
