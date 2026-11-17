@@ -1,4 +1,4 @@
-CHANGES IN VERSION 2.19.10 (2026/09/30)
+CHANGES IN VERSION 2.19.10 (2026/11/17)
 --------------------------------------
 o Better warning messages in AggregateFlowFrames
 o PlotMFIHeatmap function updated (avoid warning, improve plotting of labels in heatmap)
