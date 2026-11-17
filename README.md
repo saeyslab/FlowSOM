@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="images/FlowSOM.png" alt="FlowSOM logo" width="200">
+</p>
+
 # FlowSOM
 Using self-organizing maps for visualization and interpretation of cytometry data
 
