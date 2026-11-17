@@ -3174,7 +3174,7 @@ PlotDistancesToCenter <- function(fsom, outlierReport){
 #' @param annotationColors  A color function to color the metacluster column 
 #'                          annotation. The default colors are the ggplot colors
 #' @param cluster_rows      Whether or not to cluster the rows. Default = FALSE
-#' @param cluster_columns   Whether or not to cluster the columns Default = FALSE
+#' @param cluster_columns   Whether or not to cluster the columns. Default = FALSE
 #' @param labels            Whether or not to display the MFIs. Default = FALSE
 #' 
 #' @return Plot
@@ -3199,113 +3199,107 @@ PlotDistancesToCenter <- function(fsom, outlierReport){
 #' @export
 PlotMFIHeatmap <- function(fsom, 
                            level = c("clusters", "metaclusters"),
-                           heatmapColors = c("#313695", "#4575B4", "#74ADD1", "#ABD9E9", "#E0F3F8", "#FEE090", 
-                                             "#FDAE61", "#F46D43", "#D73027", "#A50026"),
+                           heatmapColors = c("#313695", "#4575B4", "#74ADD1", "#ABD9E9", "#E0F3F8",
+                                             "#FEE090", "#FDAE61", "#F46D43", "#D73027", "#A50026"),
                            annotationColors = gg_color_hue,
                            cluster_rows = FALSE,
                            cluster_columns = FALSE,
-                           labels = FALSE){
-  if (requireNamespace("ComplexHeatmap", quietly = TRUE)) {
-    level <- pmatch(level, c("metaclusters", "clusters"))
-    fsom <- UpdateFlowSOM(fsom)
-    if (length(level) > 2 | any(is.na(level))){
-      stop("level should be \"clusters\" or \"metaclusters\"")
-    } else {
-      level <- c("metaclusters", "clusters")[level]
-      
-      c_mfis <- t(scale(GetClusterMFIs(fsom, colsUsed = TRUE, prettyColnames = TRUE)))
-      c_mfis <- c_mfis[, order(fsom$metaclustering)]
-      mc_df <- data.frame(
-        "metaclustering" = factor(x = as.character(sort(fsom$metaclustering)), 
-                                  levels = as.character(levels(fsom$metaclustering))
-        ))
-      colors_m <- annotationColors(NMetaclusters(fsom))
-      names(colors_m) <- unique(mc_df$metaclustering)
-      mc_a <- ComplexHeatmap::HeatmapAnnotation(
-        df = mc_df,
-        col = list("metaclustering" = colors_m), 
-        name = "cl", 
-        border = TRUE, 
-        show_annotation_name = TRUE,
-        annotation_name_side = "left",
-        show_legend = FALSE
-      )
-      counts <- GetCounts(fsom, level = "clusters")[order(fsom$metaclustering)]
-      count_a <- ComplexHeatmap::HeatmapAnnotation(
-        "Counts" = ComplexHeatmap::anno_barplot(counts, 
-                                                add_numbers = TRUE, 
-                                                numbers_rot = 90, 
-                                                height = unit(2, "cm")),
-        show_annotation_name = FALSE,
-        name = "counts")
-      
-      labels_c_fun <- if (labels){
-        function(j, i, x, y, w, h, col) {
-          grid::grid.text(round(t(GetClusterMFIs(fsom, colsUsed = TRUE, prettyColnames = TRUE))[i, j], 2), x, y)
-        }
-      } else {NULL}
-      
-      c_hm <- ComplexHeatmap::Heatmap(c_mfis,
-                                      col = heatmapColors,
-                                      cluster_rows = cluster_rows, 
-                                      cluster_columns = cluster_columns, 
-                                      column_split = mc_df$metaclustering,
-                                      show_column_names = TRUE,
-                                      row_names_side = "left",
-                                      bottom_annotation = mc_a, 
-                                      top_annotation = count_a,
-                                      name = "cluster_hm",
-                                      border = TRUE,
-                                      show_heatmap_legend = ifelse(length(level) == 2, FALSE, TRUE),
-                                      cell_fun = labels_c_fun)
-      
-      
-      mc_mfis <- t(scale(GetMetaclusterMFIs(fsom, 
-                                            colsUsed = TRUE, 
-                                            prettyColnames = TRUE)))
-      
-      mc_df2 <- data.frame(
-        "metaclustering" = factor(as.character(colnames(mc_mfis)),
-                                  levels = as.character(colnames(mc_mfis))))
-      mc_a2 <- ComplexHeatmap::HeatmapAnnotation(df = mc_df2,
-                                                 col = list(
-                                                   "metaclustering" = colors_m),
-                                                 name = "mcl",
-                                                 border = TRUE, 
-                                                 show_legend = FALSE)
-      
-      labels_mc_fun <- if (labels){
-        function(j, i, x, y, w, h, col) { 
-          grid::grid.text(round(t(GetMetaclusterMFIs(fsom, colsUsed = TRUE, prettyColnames = TRUE))[i, j], 2), x, y)}
-      } else {NULL}
-      
-      mc_hm <- ComplexHeatmap::Heatmap(mc_mfis,
-                                       col = heatmapColors,
-                                       cluster_rows = cluster_rows, 
-                                       cluster_columns = cluster_columns, 
-                                       show_column_names = TRUE,
-                                       bottom_annotation = mc_a2,
-                                       column_names_side = "top",
-                                       name = "metacluster_hm", 
-                                       border = TRUE,
-                                       heatmap_legend_param = list(
-                                         title = "", 
-                                         legend_height = unit(6, "cm"), 
-                                         border = "black"),
-                                       cell_fun = labels_mc_fun)
-      if (length(level) == 2){
-        hm_list <- c_hm + mc_hm
-      } else {
-        if (level == "metaclusters"){
-          hm_list <- mc_hm
-        } else {
-          hm_list <- c_hm
-        }
-      }
-      return(hm_list)
-    }
-  } else {
+                           labels = FALSE,
+                           labelDigits = 1,       # decimals shown
+                           labelFontsize = NULL,  # NULL = auto, based on number of columns
+                           labelRot = NULL){      # NULL = auto: 90 if > 20 columns, else 0
+  if (!requireNamespace("ComplexHeatmap", quietly = TRUE)) {
     message("Please install \"ComplexHeatmap\" to add a heatmap to the FlowSOMmary")
+    return(invisible(NULL))
+  }
+  level <- pmatch(level, c("metaclusters", "clusters"))
+  fsom <- UpdateFlowSOM(fsom)
+  if (length(level) > 2 | any(is.na(level))){
+    stop("level should be \"clusters\" or \"metaclusters\"")
+  }
+  level <- c("metaclusters", "clusters")[level]
+  
+  # Vectorized label drawer: one call per heatmap slice instead of one per cell
+  make_label_fun <- function(raw, digits, fontsize, rot) {
+    if (is.null(fontsize)) fontsize <- max(3, min(10, 300 / ncol(raw)))
+    if (is.null(rot))      rot      <- if (ncol(raw) > 20) 90 else 0
+    function(j, i, x, y, w, h, fill) {
+      v <- ComplexHeatmap::pindex(raw, i, j)
+      grid::grid.text(formatC(v, format = "f", digits = digits), x, y,
+                      rot = rot, gp = grid::gpar(fontsize = fontsize))
+    }
+  }
+  
+  ## ---- Cluster heatmap ----
+  ord      <- order(fsom$metaclustering)
+  c_raw    <- GetClusterMFIs(fsom, colsUsed = TRUE, prettyColnames = TRUE)
+  c_mfis   <- t(scale(c_raw))[, ord]
+  c_rawT   <- t(c_raw)[, ord]            # same order as c_mfis -> labels match cells
+  
+  mc_df <- data.frame(
+    "metaclustering" = factor(x = as.character(sort(fsom$metaclustering)), 
+                              levels = as.character(levels(fsom$metaclustering))))
+  colors_m <- annotationColors(NMetaclusters(fsom))
+  names(colors_m) <- levels(fsom$metaclustering)
+  mc_a <- ComplexHeatmap::HeatmapAnnotation(
+    df = mc_df, col = list("metaclustering" = colors_m), name = "cl", 
+    border = TRUE, show_annotation_name = TRUE,
+    annotation_name_side = "left", show_legend = FALSE)
+  
+  counts <- GetCounts(fsom, level = "clusters")[ord]
+  count_a <- ComplexHeatmap::HeatmapAnnotation(
+    "Counts" = ComplexHeatmap::anno_barplot(counts, add_numbers = TRUE, 
+                                            numbers_rot = 90, 
+                                            height = grid::unit(2, "cm")),
+    show_annotation_name = FALSE, name = "counts")
+  
+  c_hm <- ComplexHeatmap::Heatmap(
+    c_mfis,
+    col = heatmapColors,
+    cluster_rows = cluster_rows, 
+    cluster_columns = cluster_columns, 
+    column_split = mc_df$metaclustering,
+    show_column_names = TRUE,
+    row_names_side = "left",
+    bottom_annotation = mc_a, 
+    top_annotation = count_a,
+    name = "cluster_hm",
+    border = TRUE,
+    show_heatmap_legend = length(level) != 2,
+    layer_fun = if (labels) make_label_fun(c_rawT, labelDigits, labelFontsize, labelRot) else NULL)
+  
+  ## ---- Metacluster heatmap ----
+  mc_raw  <- GetMetaclusterMFIs(fsom, colsUsed = TRUE, prettyColnames = TRUE)
+  mc_mfis <- t(scale(mc_raw))
+  mc_rawT <- t(mc_raw)
+  
+  mc_df2 <- data.frame(
+    "metaclustering" = factor(as.character(colnames(mc_mfis)),
+                              levels = as.character(colnames(mc_mfis))))
+  mc_a2 <- ComplexHeatmap::HeatmapAnnotation(
+    df = mc_df2, col = list("metaclustering" = colors_m),
+    name = "mcl", border = TRUE, show_legend = FALSE)
+  
+  mc_hm <- ComplexHeatmap::Heatmap(
+    mc_mfis,
+    col = heatmapColors,
+    cluster_rows = cluster_rows, 
+    cluster_columns = cluster_columns, 
+    show_column_names = TRUE,
+    bottom_annotation = mc_a2,
+    column_names_side = "top",
+    name = "metacluster_hm", 
+    border = TRUE,
+    heatmap_legend_param = list(title = "", legend_height = grid::unit(6, "cm"), 
+                                border = "black"),
+    layer_fun = if (labels) make_label_fun(mc_rawT, labelDigits, labelFontsize, labelRot) else NULL)
+  
+  if (length(level) == 2) {
+    c_hm + mc_hm
+  } else if (level == "metaclusters") {
+    mc_hm
+  } else {
+    c_hm
   }
 }
 
@@ -3435,8 +3429,8 @@ PlotOutliers <- function(fsom,
                             y2 = df_meansd[channel2,"mean"] + 4*df_meansd[channel2,"sd"])
       
       p_list[[paste0("C", C, "_", file)]] <- ggplot2::ggplot(data = as.data.frame(fsom$data[,c(channel1, channel2)]), 
-                                                        ggplot2::aes(x = !!ggplot2::sym(channel1), 
-                                                          y = !!ggplot2::sym(channel2))) +
+                                                             ggplot2::aes(x = !!ggplot2::sym(channel1), 
+                                                                          y = !!ggplot2::sym(channel2))) +
         ggplot2::geom_hex(data = as.data.frame(fsom$data[,c(channel1, channel2)]), bins = 100, fill = "#EBEBEB") + 
         ggplot2::geom_hex(data = df_fsomRef_c, bins = 100, fill = "#B8B8B8") +
         ggplot2::geom_hex(data = df_fsomNew_c, bins = 100) +
@@ -3444,13 +3438,13 @@ PlotOutliers <- function(fsom,
         ggplot2::theme_classic() + 
         ggplot2::theme(plot.title = ggplot2::element_text(size = 10)) +
         ggplot2::ggtitle(paste0("C", C, ", ", filename, "\n", 
-                       round(result$percentage[i], 2), "% outliers \n",
-                       marker1, ": ", round(outliers_perChannel[channel1], 2), "%, ", 
-                       marker2, ": ", round(outliers_perChannel[channel2], 2), "% outliers")) + 
+                                round(result$percentage[i], 2), "% outliers \n",
+                                marker1, ": ", round(outliers_perChannel[channel1], 2), "%, ", 
+                                marker2, ": ", round(outliers_perChannel[channel2], 2), "% outliers")) + 
         ggplot2::xlab(paste0(marker1, " (", channel1, ")")) + 
         ggplot2::ylab(paste0(marker2, " (", channel2, ")")) + 
         ggplot2::geom_rect(data = df_rect, ggplot2::aes(x=NULL, y=NULL, xmin=x1, xmax=x2, ymin=y1, ymax=y2),
-                  color = "red", alpha = 0) 
+                           color = "red", alpha = 0) 
       
       leg <- ggpubr::get_legend(p_list[[length(p_list)]])
       
